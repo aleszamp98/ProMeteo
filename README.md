@@ -1,5 +1,4 @@
 # ProMeteo: PROcessing of METEOrological Data
-
 **ProMeteo** is a Python library for preprocessing and manipulating measurements mainly from sonic anemometers and other instruments mounted on meteorological towers.
 
 It addresses specific needs of scientists and analysts working with data collected from meteorological towers. The functionalities of ProMeteo are modular — they can be used independently or together in a pipeline that goes from raw data to derived quantities and visualizations.
@@ -7,7 +6,6 @@ It addresses specific needs of scientists and analysts working with data collect
 ---
 
 ## Features
-
 ProMeteo is capable of:
 
 - Removing non-physical values from time series.
@@ -23,7 +21,6 @@ ProMeteo is capable of:
 ---
 
 ## Dependencies
-
 To run ProMeteo, the following Python packages are required:
 
 - `numpy`
@@ -34,7 +31,7 @@ You can install them with:
 
 ```bash
 pip install numpy pandas matplotlib
-
+```
 
 ## Contributing
 ProMeteo is an open project. Suggestions, corrections, and contributions are very welcome!
@@ -44,7 +41,6 @@ ProMeteo is an open project. Suggestions, corrections, and contributions are ver
 -Or contact me directly via email (see below)
 
 ## How to Cite
-
 If you use ProMeteo in a publication or presentation, please cite it as:
 ```
 @software{ProMeteo_zampella_alessandro,
@@ -53,4 +49,5 @@ If you use ProMeteo in a publication or presentation, please cite it as:
   month        = apr,
   year         = 2025,
   url          = {https://github.com/aleszamp98/ProMeteo.git}
-} ```
+}
+```
