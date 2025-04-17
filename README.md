@@ -1,4 +1,7 @@
 # ProMeteo: PROcessing of METEOrological Data
+
+<img src="img/logo.png" alt="Logo" width="200"/>
+
 **ProMeteo** is a Python library for preprocessing and manipulating measurements mainly from sonic anemometers and other instruments mounted on meteorological towers.
 
 It addresses specific needs of scientists and analysts working with data collected from meteorological towers. The functionalities of ProMeteo are modular — they can be used independently or together in a pipeline that goes from raw data to derived quantities and visualizations.
