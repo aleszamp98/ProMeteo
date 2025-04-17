@@ -36,6 +36,11 @@ You can install them with:
 pip install numpy pandas matplotlib
 ```
 
+# Documentation
+
+The full documentation for the project is available on [Read the Docs](https://pro-meteo.readthedocs.io/en/latest/).
+
+
 ## Contributing
 ProMeteo is an open project. Suggestions, corrections, and contributions are very welcome!
 
