@@ -1,0 +1,21 @@
+# Ignora file temporanei di sistema
+.DS_Store
+Thumbs.db
+
+# Ignora cartelle:
+temp/
+docs/build/
+logs/
+
+*.log
+
+# Ignora file Python compilati
+__pycache__/
+*.pyc
+
+# Ignora ambienti virtuali
+venv/
+env/
+
+# Ignora file temporanei di editor
+*.swp
