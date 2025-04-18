@@ -27,6 +27,6 @@ def fill_missing_timestamps(data: pd.DataFrame, freq: float) -> pd.DataFrame:
     freq = pd.to_timedelta(dt_s, unit='s') # pandas-compatible frequency string
     data = data.sort_index()    
     full_index = pd.date_range(start=data.index.min(), end=data.index.max(), freq=freq) # Create the complete range of timestamps
-    complete_df = data.reindex(full_index) # Reindex the DataFrame to include all timestamps
+    complete_data = data.reindex(full_index) # Reindex the DataFrame to include all timestamps
     
-    return complete_df
+    return complete_data
