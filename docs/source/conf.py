@@ -1,7 +1,7 @@
 # Configuration file for the Sphinx documentation builder.
 import os
 import sys
-sys.path.insert(0, os.path.abspath("../../src"))  # Assicurati che il percorso sia corretto
+sys.path.insert(0, os.path.abspath("../../src/"))  # Assicurati che il percorso sia corretto
 
 project = 'ProMeteo'
 copyright = '2025, Alessandro Zampella'
