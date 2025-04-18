@@ -1,6 +1,6 @@
 numpy
 pandas
-os
+
 sphinx
 sphinx_rtd_theme
 sphinx_autodoc_typehints
