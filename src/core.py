@@ -15,7 +15,7 @@ def load_config(path):
     Returns
     -------
     dict
-        Dictionary containing the parameters.
+        Dictionary containing the parameters for main.py .
 
     Raises
     ------
@@ -35,6 +35,10 @@ def load_config(path):
         rawdata_path = config.get('general', 'rawdata_path')
         dir_out = config.get('general', 'dir_out')
         sampling_freq_str = config.get('general', 'sampling_freq')
+
+        horizontal_threshold_str = config.get('remove_beyond_threshold', 'horizontal_threshold')
+        vertical_threshold_str = config.get('remove_beyond_threshold', 'vertical_threshold')
+        temperature_threshold_str = config.get('remove_beyond_threshold', 'temperature_threshold')
     except configparser.NoSectionError as e:
         raise configparser.NoSectionError(e.section) from e
     except configparser.NoOptionError as e:
@@ -44,11 +48,24 @@ def load_config(path):
         sampling_freq = int(sampling_freq_str)
     except ValueError as e:
         raise ValueError(f"'sampling_freq' must be an integer, got '{sampling_freq_str}' instead.") from e
+    
+    try:
+        horizontal_threshold = float(horizontal_threshold_str)
+        vertical_threshold = float(vertical_threshold_str)
+        temperature_threshold = float(temperature_threshold_str)
+    except ValueError as e:
+        raise ValueError(
+            "Threshold values must be float-compatible.\n"
+            f"Got: horizontal='{horizontal_threshold_str}', vertical='{vertical_threshold_str}', temperature='{temperature_threshold_str}'"
+        ) from e
 
     params = {
         'rawdata_path': rawdata_path,
         'dir_out': dir_out,
         'sampling_freq': sampling_freq,
+        'horizontal_threshold': horizontal_threshold,
+        'vertical_threshold': vertical_threshold,
+        'temperature_threshold': temperature_threshold,
     }
 
 

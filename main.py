@@ -35,9 +35,16 @@ params = core.load_config(config_file_path)
 rawdata_path = params['rawdata_path']
 dir_out = params['dir_out']
 sampling_freq = params['sampling_freq']
+horizontal_threshold=params['horizontal_threshold']
+vertical_threshold=params['vertical_threshold']
+temperature_threshold=params['temperature_threshold']
+
 logger.info(f"""
             Parameters read:
             - Sampling Frequency: {sampling_freq}
+            - Horizontal threshold: {horizontal_threshold}
+            - Vetical threshold: {vertical_threshold}
+            - Temperature threshold: {temperature_threshold}
             """)
 
 # data import: it has to be a .csv file containing 4 columns: TIMESTAMP, u,v,w,T_s => data
@@ -49,7 +56,13 @@ logger.info(f"""
 # filling holes known sampling frequency
 data=pre_processing.fill_missing_timestamps(rawdata, sampling_freq)
 logger.info(f"Missing timestamps filling completed.")
+
 # non physical value cutting
+data=pre_processing.remove_beyond_threshold(data,
+                                            horizontal_threshold,
+                                            vertical_threshold,
+                                            temperature_threshold)
+logger.info(f"Removing non physical values (over threshold) completed.")
 
 # despiking
 

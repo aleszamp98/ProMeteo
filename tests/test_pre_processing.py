@@ -46,3 +46,5 @@ def test_negative_frequency():
         assert False, "Expected ValueError"
     except ValueError:
         pass
+
+##### testing remove_beyond_threshold() #####

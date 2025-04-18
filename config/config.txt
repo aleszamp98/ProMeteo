@@ -5,3 +5,8 @@ rawdata_path = /home/zampa/projects/ProMeteo/data/test_data.csv
 dir_out= /home/zampa/projects/ProMeteo/data/
 # sampling frequency
 sampling_freq = 20
+
+[remove_beyond_threshold]
+horizontal_threshold=30
+vertical_threshold=5
+temperature_threshold=19

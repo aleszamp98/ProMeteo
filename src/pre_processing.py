@@ -30,3 +30,32 @@ def fill_missing_timestamps(data: pd.DataFrame, freq: float) -> pd.DataFrame:
     complete_data = data.reindex(full_index) # Reindex the DataFrame to include all timestamps
     
     return complete_data
+    
+def remove_beyond_threshold(
+    data: pd.DataFrame,
+    horizontal_threshold: float,
+    vertical_threshold: float,
+    temperature_threshold: float
+    ) -> pd.DataFrame:
+    """
+    Replaces values exceeding specific thresholds in the columns 'u', 'v', 'w', and 'T_s' with NaN.
+
+    Parameters:
+    - data: pd.DataFrame - input DataFrame with columns 'u', 'v', 'w', and 'T_s'
+    - horizontal_threshold: float - threshold for 'u' and 'v'
+    - vertical_threshold: float - threshold for 'w'
+    - temperature_threshold: float - threshold for 'T_s'
+
+    Returns:
+    - pd.DataFrame - the cleaned DataFrame with outliers replaced by NaN
+    """
+    data_clean = data.copy()
+
+    for col in ['u', 'v']:
+        data_clean.loc[data_clean[col].abs() > horizontal_threshold, col] = np.nan
+
+    data_clean.loc[data_clean['w'].abs() > vertical_threshold, 'w'] = np.nan
+
+    data_clean.loc[data_clean['T_s'].abs() > temperature_threshold, 'T_s'] = np.nan
+
+    return data_clean
