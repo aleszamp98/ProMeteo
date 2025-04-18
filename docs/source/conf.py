@@ -1,6 +1,7 @@
 # Configuration file for the Sphinx documentation builder.
 import os
 import sys
+print(sys.path)
 sys.path.insert(0, os.path.abspath("../../src/"))  # Assicurati che il percorso sia corretto
 
 project = 'ProMeteo'
@@ -11,7 +12,7 @@ release = '1.0.0'
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.napoleon',  # Supporto per docstring Google/NumPy
-    'sphinx_autodoc_typehints',  # Aggiunge automaticamente gli hints dei tipi
+    # 'sphinx_autodoc_typehints',  # Aggiunge automaticamente gli hints dei tipi
 ]
 
 templates_path = ['_templates']
