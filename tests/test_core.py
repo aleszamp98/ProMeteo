@@ -2,9 +2,77 @@ import pytest
 import pandas as pd
 # import os 
 import sys
+import configparser
 from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parent.parent / "src"))
 import core
+
+
+##### testing core.load_config() #####
+
+def write_config_file(tmp_path, content: str):
+    config_file = tmp_path / "config.txt"
+    config_file.write_text(content)
+    return config_file
+
+def test_valid_config(tmp_path):
+    content = """
+    [general]
+    rawdata_path = ./data.csv
+    dir_out = ./output/
+    sampling_freq = 20
+    """
+    config_path = write_config_file(tmp_path, content)
+    params = core.load_config(config_path)
+    assert params['sampling_freq'] == 20
+    assert isinstance(params['rawdata_path'], str)
+    assert isinstance(params['dir_out'], str)
+
+def test_missing_section(tmp_path):
+    content = """
+    [wrong_section]
+    rawdata_path = ./data.csv
+    dir_out = ./output/
+    sampling_freq = 10
+    """
+    config_path = write_config_file(tmp_path, content)
+    with pytest.raises(configparser.NoSectionError):
+        core.load_config(config_path)
+
+def test_missing_option(tmp_path):
+    content = """
+    [general]
+    rawdata_path = ./data.csv
+    # dir_out missing
+    sampling_freq = 10
+    """
+    config_path = write_config_file(tmp_path, content)
+    with pytest.raises(configparser.NoOptionError):
+        core.load_config(config_path)
+
+def test_invalid_type(tmp_path):
+    content = """
+    [general]
+    rawdata_path = ./data.csv
+    dir_out = ./output/
+    sampling_freq = ten
+    """
+    config_path = write_config_file(tmp_path, content)
+    with pytest.raises(ValueError, match="sampling_freq.*integer"):
+        core.load_config(config_path)
+
+def test_config_read_empty(tmp_path):
+    config_path = tmp_path / "config_missing.txt"
+    config = configparser.ConfigParser()
+    read_files = config.read(config_path)
+    assert read_files == []  # Deve restituire una lista vuota
+
+# def test_simple_print():
+#     print("Test semplice in esecuzione!")
+#     assert True
+
+
+##### testing core.import_data() #####
 
 def test_import_valid_file(tmp_path):
     file_path = tmp_path / "try.csv"

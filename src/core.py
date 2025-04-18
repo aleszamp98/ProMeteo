@@ -1,6 +1,60 @@
 import numpy as np
 import pandas as pd
 import os
+import configparser
+
+
+def load_config(path):
+    """
+    Loads parameters from a config.txt file and returns them as a dictionary.
+
+    Parameters
+    ----------
+    path : str or Path
+        Path to the config.txt file.
+
+    Returns
+    -------
+    dict
+        Dictionary containing the parameters.
+
+    Raises
+    ------
+    FileNotFoundError
+        If the file does not exist or cannot be read.
+    configparser.NoSectionError
+        If a required section is missing.
+    configparser.NoOptionError
+        If a required option is missing.
+    ValueError
+        If a parameter cannot be converted to the expected type.
+    """
+    config = configparser.ConfigParser()
+    files_read = config.read(path)
+
+    try:
+        rawdata_path = config.get('general', 'rawdata_path')
+        dir_out = config.get('general', 'dir_out')
+        sampling_freq_str = config.get('general', 'sampling_freq')
+    except configparser.NoSectionError as e:
+        raise configparser.NoSectionError(e.section) from e
+    except configparser.NoOptionError as e:
+        raise configparser.NoOptionError(e.option, e.section) from e
+
+    try:
+        sampling_freq = int(sampling_freq_str)
+    except ValueError as e:
+        raise ValueError(f"'sampling_freq' must be an integer, got '{sampling_freq_str}' instead.") from e
+
+    params = {
+        'rawdata_path': rawdata_path,
+        'dir_out': dir_out,
+        'sampling_freq': sampling_freq,
+    }
+
+
+    return params
+
 
 
 def import_data(path):

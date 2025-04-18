@@ -1,0 +1,7 @@
+[general]
+# path of the input file .csv containing rawdata
+rawdata_path = /home/zampa/projects/ProMeteo/data/test_data.csv 
+# output directory
+dir_out= /home/zampa/projects/ProMeteo/data/
+# sampling frequency
+sampling_freq = 20
