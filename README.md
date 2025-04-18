@@ -38,7 +38,7 @@ pip install numpy pandas matplotlib
 
 # Documentation
 
-The full documentation for the project is available on [Read the Docs](https://pro-meteo.readthedocs.io/en/latest/).
+The full documentation for the project is available on [Read the Docs: ProMeteo](https://pro-meteo.readthedocs.io/en/latest/).
 
 
 ## Contributing
