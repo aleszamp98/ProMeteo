@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import matplotlib as plt
 import os
+import logging
 
 # ProMeteo Modules
 import src.core as core
@@ -10,20 +11,40 @@ import src.pre_processing as pre_processing
 import src.reynolds as reynolds
 import src.plotting as plotting
 
+
 # configuration-file path (meant to be in the "config/" folder)
 script_dir = os.path.dirname(os.path.abspath(__file__))
-config_file_path = os.path.abspath(os.path.join(script_dir, 'config', 'config.txt'))
+config_file_path = f'{script_dir}/config/config.txt'
 
-# parser definition to import hte parameters of the run
+# setting the logger
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+file_handler = logging.FileHandler(f'{script_dir}/data/run.log', mode='w')
+file_handler.setLevel(logging.INFO)
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.INFO)
+formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+file_handler.setFormatter(formatter)
+console_handler.setFormatter(formatter)
+logger.addHandler(file_handler)
+logger.addHandler(console_handler)
+logger.info("ProMeteo")
+
+# parser definition to import the parameters of the run
 params = core.load_config(config_file_path)
 rawdata_path = params['rawdata_path']
 dir_out = params['dir_out']
 sampling_freq = params['sampling_freq']
-
-# creating the log file through a function
+logger.info(f"""
+            Parameters read:
+            - Sampling Frequency: {sampling_freq}
+            """)
 
 # data import: it has to be a .csv file containing 4 columns: TIMESTAMP, u,v,w,T_s => data
-raw_data=core.import_data(rawdata_path)
+rawdata=core.import_data(rawdata_path)
+logger.info(f"""
+            Raw Data imported from: {rawdata_path}
+            """)
 
 # filling holes known sampling frequency
 
