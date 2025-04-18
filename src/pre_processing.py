@@ -11,7 +11,7 @@ def fill_missing_timestamps(data: pd.DataFrame, freq: float) -> pd.DataFrame:
 
     Parameters:
     -----------
-    df : pd.DataFrame
+    data : pd.DataFrame
         DataFrame with a datetime index.
     freq : float
         Sampling frequency in Hertz (Hz).
