@@ -47,7 +47,8 @@ logger.info(f"""
             """)
 
 # filling holes known sampling frequency
-
+data=pre_processing.fill_missing_timestamps(rawdata, sampling_freq)
+logger.info(f"Missing timestamps filling completed.")
 # non physical value cutting
 
 # despiking

@@ -67,10 +67,6 @@ def test_config_read_empty(tmp_path):
     read_files = config.read(config_path)
     assert read_files == []  # Deve restituire una lista vuota
 
-# def test_simple_print():
-#     print("Test semplice in esecuzione!")
-#     assert True
-
 
 ##### testing core.import_data() #####
 
