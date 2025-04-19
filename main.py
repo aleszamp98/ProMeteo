@@ -38,6 +38,7 @@ sampling_freq = params['sampling_freq']
 horizontal_threshold=params['horizontal_threshold']
 vertical_threshold=params['vertical_threshold']
 temperature_threshold=params['temperature_threshold']
+despiking_mode=params['despiking_mode']
 
 logger.info(f"""
             Parameters read:
@@ -45,6 +46,7 @@ logger.info(f"""
             - Horizontal threshold: {horizontal_threshold}
             - Vetical threshold: {vertical_threshold}
             - Temperature threshold: {temperature_threshold}
+            - Despiking mode: {despiking_mode}
             """)
 
 # data import: it has to be a .csv file containing 4 columns: TIMESTAMP, u,v,w,T_s => data
@@ -53,7 +55,7 @@ logger.info(f"""
             Raw Data imported from: {rawdata_path}
             """)
 
-# filling holes known sampling frequency
+# filling missing timestamps known sampling frequency
 data=pre_processing.fill_missing_timestamps(rawdata, sampling_freq)
 logger.info(f"Missing timestamps filling completed.")
 
@@ -65,6 +67,10 @@ data=pre_processing.remove_beyond_threshold(data,
 logger.info(f"Removing non physical values (over threshold) completed.")
 
 # despiking
+if despiking_mode=="VM97":
+    data = pre_processing.despiking_VM97()
+elif despiking_mode=="robust":
+    data = pre_processing.despiking_robust()
 
 # salvataggio intermedio
 

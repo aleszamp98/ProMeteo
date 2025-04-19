@@ -39,16 +39,20 @@ def load_config(path : str) -> dict:
         horizontal_threshold_str = config.get('remove_beyond_threshold', 'horizontal_threshold')
         vertical_threshold_str = config.get('remove_beyond_threshold', 'vertical_threshold')
         temperature_threshold_str = config.get('remove_beyond_threshold', 'temperature_threshold')
+
+        despiking_mode = config.get('despiking', 'despiking_mode')
     except configparser.NoSectionError as e:
         raise configparser.NoSectionError(e.section) from e
     except configparser.NoOptionError as e:
         raise configparser.NoOptionError(e.option, e.section) from e
-
+    
+    # control over passed sampling frequency
     try:
         sampling_freq = int(sampling_freq_str)
     except ValueError as e:
         raise ValueError(f"'sampling_freq' must be an integer, got '{sampling_freq_str}' instead.") from e
     
+    # control over passed thresholds
     try:
         horizontal_threshold = float(horizontal_threshold_str)
         vertical_threshold = float(vertical_threshold_str)
@@ -58,6 +62,11 @@ def load_config(path : str) -> dict:
             "Threshold values must be float-compatible.\n"
             f"Got: horizontal='{horizontal_threshold_str}', vertical='{vertical_threshold_str}', temperature='{temperature_threshold_str}'"
         ) from e
+    # control over despiking_mode
+    allowed_modes = ['VM97', 'ROBUST']
+    if despiking_mode not in allowed_modes:
+        raise ValueError(f"Invalid value for 'despiking_mode': '{despiking_mode}'. "
+                         f"Allowed values are: {allowed_modes}")
 
     params = {
         'rawdata_path': rawdata_path,
@@ -66,6 +75,7 @@ def load_config(path : str) -> dict:
         'horizontal_threshold': horizontal_threshold,
         'vertical_threshold': vertical_threshold,
         'temperature_threshold': temperature_threshold,
+        'despiking_mode': despiking_mode,
     }
 
 

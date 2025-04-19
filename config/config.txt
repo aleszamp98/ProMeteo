@@ -2,11 +2,15 @@
 # path of the input file .csv containing rawdata
 rawdata_path = /home/zampa/projects/ProMeteo/data/test_data.csv 
 # output directory
-dir_out= /home/zampa/projects/ProMeteo/data/
+dir_out = /home/zampa/projects/ProMeteo/data/
 # sampling frequency
 sampling_freq = 20
 
 [remove_beyond_threshold]
-horizontal_threshold=30
-vertical_threshold=5
-temperature_threshold=19
+horizontal_threshold = 30
+vertical_threshold = 5
+temperature_threshold = 19
+
+[despiking]
+# despiking mode, two options: VM97 to execute (Vickers and Mahrt, 1997) procedure or ROBUST, see documentation.
+despiking_mode = VM97
