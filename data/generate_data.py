@@ -4,8 +4,6 @@ import os
 
 
 dir_out=os.path.dirname(os.path.abspath(__file__))+"/"
-print(dir_out)
-
 name_out="test_data"
 length=60 # [min]
 sampl_frequency=20 # [Hz]

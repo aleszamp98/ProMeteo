@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+from typing import Tuple
 
 
 ## controllo se possiede un numero di entrate pari alla frequenza* delta_t compreso tra l'inzio e la fine del 
@@ -74,3 +75,58 @@ def remove_beyond_threshold(
 
     return data_clean
 
+##### DESPIKING SECTION #####
+# definizione input: finestra in min per calcolo mobile, numero di valori consecutivi fuori soglia, costanti da cui partire:
+#  c_h (orizzontale), c_v (verticale), c_T (temp)
+
+# conviene trasferirla nel modulo core (perchè la media mobile è usata anche da reynolds module)
+def running_stats(array : np.ndarray,
+                  window_length : int) -> Tuple[np.ndarray, np.ndarray]:
+    
+    return running_mean, running_std
+
+def linear_interp(left_border, right_border, n_points):
+    return interp_points
+
+def identify_interp_spikes(beyond_bounds_mask, max_consecutive_spikes):
+    return array_modified, spike_flag
+
+def data_despiking_VM97(data: pd.DataFrame,
+                        window_length : int,
+                        max_consecutive_spikes : int,
+                        max_iterations : int,
+                        c_h: float,
+                        c_v: float,
+                        c_T: float,
+                        ) -> pd.DataFrame:
+    data_despiked = pd.DataFrame(index=data.index, columns=data.columns)
+    c_list = [c_h, c_h, c_v, c_T]
+    c_increment=0.1
+
+    for col, c in zip(['u', 'v', 'w', 'T_s'], c_list):
+        array_to_despike = data[col].to_numpy()
+        spike_flag = True
+        iteration = 0
+        while spike_flag and iteration < max_iterations:
+            running_mean, running_std = running_stats(array_to_despike, window_length)
+            upper_bound = running_mean+c*running_std
+            lower_bound = running_mean-c*running_std
+            beyond_bounds_mask = (array_to_despike > upper_bound) | (array_to_despike < lower_bound)
+            array_despiked, spike_flag = identify_interp_spikes(beyond_bounds_mask, max_consecutive_spikes)
+            c += c_increment # at each iteration the threshold increment their distance 
+            iteration += 1
+            del running_mean, running_std, upper_bound, lower_bound, beyond_bounds_mask
+
+        data_despiked[col] = array_despiked
+        del array_despiked
+
+    return data_despiked
+
+
+
+def data_despiking_ROBUST(data : pd.DataFrame) -> pd.DataFrame:
+
+    data_despiked=data
+
+
+    return data_despiked

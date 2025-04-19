@@ -30,7 +30,7 @@ logger.addHandler(file_handler)
 logger.addHandler(console_handler)
 logger.info("ProMeteo")
 
-# parser definition to import the parameters of the run
+# parser definition and import the parameters of the run
 params = core.load_config(config_file_path)
 rawdata_path = params['rawdata_path']
 dir_out = params['dir_out']
@@ -39,6 +39,7 @@ horizontal_threshold=params['horizontal_threshold']
 vertical_threshold=params['vertical_threshold']
 temperature_threshold=params['temperature_threshold']
 despiking_mode=params['despiking_mode']
+
 
 logger.info(f"""
             Parameters read:
@@ -67,10 +68,10 @@ data=pre_processing.remove_beyond_threshold(data,
 logger.info(f"Removing non physical values (over threshold) completed.")
 
 # despiking
-if despiking_mode=="VM97":
-    data = pre_processing.despiking_VM97()
-elif despiking_mode=="robust":
-    data = pre_processing.despiking_robust()
+if despiking_mode == "VM97":
+    data = pre_processing.data_despiking_VM97(data)
+elif despiking_mode == "robust":
+    data = pre_processing.data_despiking_ROBUST(data)
 
 # salvataggio intermedio
 
