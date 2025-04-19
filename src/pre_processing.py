@@ -57,8 +57,8 @@ def remove_beyond_threshold(
     - pd.DataFrame
         The cleaned DataFrame with outliers replaced by NaN.
 
-    Notes
-    -----
+    Notes:
+    ------
     The distinction of thresholds into horizontal and vertical is based on the fact that
     horizontal motions are usually more intense than vertical motions by two or more
     orders of magnitude.

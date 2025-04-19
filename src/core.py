@@ -3,7 +3,7 @@ import os
 import configparser
 
 
-def load_config(path):
+def load_config(path : str) -> dict:
     """
     Loads parameters from a config.txt file and returns them as a dictionary.
 
@@ -73,7 +73,7 @@ def load_config(path):
 
 
 
-def import_data(path):
+def import_data(path : str) -> pd.DataFrame:
 
     """
     Imports a CSV file containing data collected from sonic anemometer.
