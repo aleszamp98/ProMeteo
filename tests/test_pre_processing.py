@@ -48,3 +48,43 @@ def test_negative_frequency():
         pass
 
 ##### testing remove_beyond_threshold() #####
+
+def test_remove_beyond_threshold():
+    # DataFrame fittizio pensato per coprire tutti i casi
+    data = pd.DataFrame({
+        'u': [5.0, 10.1, -9.9],      # solo il secondo supera la soglia
+        'v': [0.0, -15.0, 10.0],     # solo il secondo supera (assoluto > 10)
+        'w': [0.05, -0.1, 0.2],      # solo il terzo supera
+        'T_s': [19.9, -20.0, 25.0]   # solo il terzo supera (assoluto > 20)
+    }, index=pd.date_range("2022-01-01", periods=3, freq="s"))
+
+    horizontal_threshold = 10.0
+    vertical_threshold = 0.1
+    temperature_threshold = 20.0
+
+    cleaned = pre_processing.remove_beyond_threshold(
+        data,
+        horizontal_threshold,
+        vertical_threshold,
+        temperature_threshold
+    )
+
+    # Colonna "u"
+    assert not np.isnan(cleaned.loc[data.index[0], 'u'])  # 5.0 < 10
+    assert np.isnan(cleaned.loc[data.index[1], 'u'])      # 10.1 > 10
+    assert not np.isnan(cleaned.loc[data.index[2], 'u'])  # 9.9 < 10
+
+    # Colonna "v"
+    assert not np.isnan(cleaned.loc[data.index[0], 'v'])  # 0.0 < 10
+    assert np.isnan(cleaned.loc[data.index[1], 'v'])      # 15.0 > 10
+    assert not np.isnan(cleaned.loc[data.index[2], 'v'])  # 10.0 == 10 → OK
+
+    # Colonna "w"
+    assert not np.isnan(cleaned.loc[data.index[0], 'w'])  # 0.05 < 0.1
+    assert not np.isnan(cleaned.loc[data.index[1], 'w'])  # 0.1 == 0.1 → OK
+    assert np.isnan(cleaned.loc[data.index[2], 'w'])      # 0.2 > 0.1
+
+    # Colonna "T_s"
+    assert not np.isnan(cleaned.loc[data.index[0], 'T_s'])  # 19.9 < 20
+    assert not np.isnan(cleaned.loc[data.index[1], 'T_s'])  # 20.0 == 20 → OK
+    assert np.isnan(cleaned.loc[data.index[2], 'T_s'])      # 25.0 > 20
