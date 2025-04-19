@@ -38,16 +38,30 @@ def remove_beyond_threshold(
     temperature_threshold: float
     ) -> pd.DataFrame:
     """
-    Replaces values exceeding specific thresholds in the columns 'u', 'v', 'w', and 'T_s' with NaN.
+    Replaces values exceeding specific thresholds in the columns "u", "v", "w", and "T_s" with NaN.
+    The threshold definition is
 
     Parameters:
-    - data: pd.DataFrame - input DataFrame with columns 'u', 'v', 'w', and 'T_s'
-    - horizontal_threshold: float - threshold for 'u' and 'v'
-    - vertical_threshold: float - threshold for 'w'
-    - temperature_threshold: float - threshold for 'T_s'
+    -----------
+    data : pd.DataFrame
+        DataFrame with columns "u", "v", "w", and "T_s" and datetime index.
+    horizontal_threshold : float
+        Threshold for horizontal components of the wind vector: "u" and "v".
+    vertical_threshold : float
+        Threshold for the vertical component of the wind vector: "w".
+    temperature_threshold : float
+        Threshold for sonic temperature "T_s".
 
     Returns:
-    - pd.DataFrame - the cleaned DataFrame with outliers replaced by NaN
+    --------
+    - pd.DataFrame
+        The cleaned DataFrame with outliers replaced by NaN.
+
+    Notes
+    -----
+    The distinction of thresholds into horizontal and vertical is based on the fact that
+    horizontal motions are usually more intense than vertical motions by two or more
+    orders of magnitude.
     """
     data_clean = data.copy()
 
