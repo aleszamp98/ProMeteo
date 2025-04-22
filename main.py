@@ -40,7 +40,7 @@ vertical_threshold = params['vertical_threshold']
 temperature_threshold = params['temperature_threshold']
 despiking_mode = params['despiking_mode']
 window_length_despiking = params['window_length_despiking']
-max_n_consecutive_values = params['max_n_consecutive_values']
+max_length_spike = params['max_length_spike']
 max_iterations = params['max_iterations']
 c_H = params['c_H']
 c_V = params['c_V']
@@ -84,7 +84,7 @@ if despiking_mode == "VM97":
     logger.info(f"""
                 - Mode: {despiking_mode}
                 - Moving window length: {window_length_despiking} min => {window_length_despiking_points} points
-                - Maximum number of consecutive values to be considered spike: {max_n_consecutive_values}
+                - Maximum number of consecutive values to be considered spike: {max_length_spike}
                 - Maximum number of iterations to perform: {max_iterations}
                 - Starting values of c:
                     - For the horizontal components of the wind: {c_H}
@@ -98,7 +98,7 @@ if despiking_mode == "VM97":
         data_despiked[col] = pre_processing.despiking_VM97(array_to_despike,
                                                            c,
                                                            window_length_despiking_points,
-                                                           max_n_consecutive_values,
+                                                           max_length_spike,
                                                            max_iterations)
 elif despiking_mode == "robust":
     logger.info(f"""
