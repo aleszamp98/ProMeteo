@@ -14,3 +14,13 @@ temperature_threshold = 19
 [despiking]
 # despiking mode, two options: VM97 to execute (Vickers and Mahrt, 1997) procedure or ROBUST, see documentation.
 despiking_mode = VM97
+# legth in [min] of the moving window to perform the despiking procedure
+window_length = 5
+# maximum number of consecutive values over computed bounds to identify as spike
+max_n_consecutive_values = 3
+# iteration at which to stop the process
+max_iterations = 5
+# starting constants for the definition of the upper and lower bounds (for the VM97 mode only)
+c_H = 3
+c_V = 3
+c_T = 1

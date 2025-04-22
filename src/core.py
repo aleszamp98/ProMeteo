@@ -41,6 +41,13 @@ def load_config(path : str) -> dict:
         temperature_threshold_str = config.get('remove_beyond_threshold', 'temperature_threshold')
 
         despiking_mode = config.get('despiking', 'despiking_mode')
+        window_length = config.get('despiking', 'window_length')
+        max_n_consecutive_values = config.get('despiking', 'max_n_consecutive_values')
+        max_iterations = config.get('despiking', 'max_iterations')
+        c_H = config.get('despiking', 'c_H')
+        c_V = config.get('despiking', 'c_V')
+        c_T = config.get('despiking', 'c_T')
+
     except configparser.NoSectionError as e:
         raise configparser.NoSectionError(e.section) from e
     except configparser.NoOptionError as e:
@@ -59,14 +66,35 @@ def load_config(path : str) -> dict:
         temperature_threshold = float(temperature_threshold_str)
     except ValueError as e:
         raise ValueError(
-            "Threshold values must be float-compatible.\n"
+            "Threshold values must be numbers.\n"
             f"Got: horizontal='{horizontal_threshold_str}', vertical='{vertical_threshold_str}', temperature='{temperature_threshold_str}'"
         ) from e
+    
     # control over despiking_mode
     allowed_modes = ['VM97', 'ROBUST']
     if despiking_mode not in allowed_modes:
         raise ValueError(f"Invalid value for 'despiking_mode': '{despiking_mode}'. "
                          f"Allowed values are: {allowed_modes}")
+    
+    # control over passed inputs for despiking procedure
+    try:
+        window_length = int(window_length)
+        max_n_consecutive_values = int(max_n_consecutive_values)
+        max_iterations = int(max_iterations)
+    except ValueError as e:
+        raise ValueError(
+            "window_length, max_n_consecutive_values and max_iterations must be integers.\n"
+            f"Got: window_length='{window_length}', max_n_consecutive_values='{max_n_consecutive_values}' and max_iterations='{max_iterations}'"
+        ) from e
+    try:
+        c_H = float(c_H)
+        c_V = float(c_V)
+        c_T = float(c_T)
+    except ValueError as e:
+        raise ValueError(
+            "c_H, c_V and c_T must be numbers.\n"
+            f"Got: c_H='{c_H}', c_V='{c_V}', c_T='{c_T}'"
+        ) from e
 
     params = {
         'rawdata_path': rawdata_path,
@@ -76,6 +104,12 @@ def load_config(path : str) -> dict:
         'vertical_threshold': vertical_threshold,
         'temperature_threshold': temperature_threshold,
         'despiking_mode': despiking_mode,
+        'window_length' : window_length,
+        'max_n_consecutive_values' : max_n_consecutive_values,
+        'max_iterations' : max_iterations,
+        'c_H' : c_H,
+        'c_V' : c_V,
+        'c_T' : c_T,
     }
 
 
