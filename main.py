@@ -35,24 +35,22 @@ params = core.load_config(config_file_path)
 rawdata_path = params['rawdata_path']
 dir_out = params['dir_out']
 sampling_freq = params['sampling_freq']
-horizontal_threshold=params['horizontal_threshold']
-vertical_threshold=params['vertical_threshold']
-temperature_threshold=params['temperature_threshold']
-despiking_mode=params['despiking_mode']
+horizontal_threshold = params['horizontal_threshold']
+vertical_threshold = params['vertical_threshold']
+temperature_threshold = params['temperature_threshold']
+despiking_mode = params['despiking_mode']
+window_length = params['window_length']
+max_n_consecutive_values = params['max_n_consecutive_values']
+max_iterations = params['max_iterations']
+c_H = params['c_H']
+c_V = params['c_V']
+c_T = params['c_T']
 
-
-logger.info(f"""
-            Parameters read:
-            - Sampling Frequency: {sampling_freq}
-            - Horizontal threshold: {horizontal_threshold}
-            - Vetical threshold: {vertical_threshold}
-            - Temperature threshold: {temperature_threshold}
-            - Despiking mode: {despiking_mode}
-            """)
 
 # data import: it has to be a .csv file containing 4 columns: TIMESTAMP, u,v,w,T_s => data
 rawdata=core.import_data(rawdata_path)
 logger.info(f"""
+            Selected sampling frequency: {sampling_freq}
             Raw Data imported from: {rawdata_path}
             """)
 
@@ -61,17 +59,57 @@ data=pre_processing.fill_missing_timestamps(rawdata, sampling_freq)
 logger.info(f"Missing timestamps filling completed.")
 
 # non physical value cutting
+logger.info(f"""
+            Removing values from time series that exceed the following thresholds:
+            - Horizontal threshold: {horizontal_threshold}
+            - Vetical threshold: {vertical_threshold}
+            - Temperature threshold: {temperature_threshold}
+            """)
 data=pre_processing.remove_beyond_threshold(data,
                                             horizontal_threshold,
                                             vertical_threshold,
                                             temperature_threshold)
-logger.info(f"Removing non physical values (over threshold) completed.")
+logger.info(f"Removing exceeding values completed.")
 
 # despiking
+logger.info(f"""
+            Running despiking.
+            """)
+data_despiked = pd.DataFrame(index=data.index, columns=data.columns)
 if despiking_mode == "VM97":
-    data = pre_processing.data_despiking_VM97(data)
+    logger.info(f"""
+                - Mode: {despiking_mode}
+                - Moving window length: {window_length}
+                - Maximum number of consecutive values to be considered spike: {max_n_consecutive_values}
+                - Maximum number of iterations to perform: {max_iterations}
+                - Starting values of c:
+                    - For the horizontal components of the wind: {c_H}
+                    - For the vertical component: {c_V}
+                    - For the sonic temperature: {c_T}
+                """)
+    c_list = [c_H, c_H, c_V, c_T] # starting constants
+    for col, c in zip(['u', 'v', 'w', 'T_s'], c_list):
+        array_to_despike = data[col].to_numpy()
+
+        data_despiked[col] = pre_processing.despiking_VM97(array_to_despike,
+                                                                 c,
+                                                                 window_length,
+                                                                 max_n_consecutive_values,
+                                                                 max_iterations)
 elif despiking_mode == "robust":
-    data = pre_processing.data_despiking_ROBUST(data)
+    logger.info(f"""
+                - Mode: {despiking_mode}
+                - Moving window length: {window_length}
+                """)
+    for col in ['u', 'v', 'w', 'T_s']:
+        array_to_despike = data[col].to_numpy()
+        data_despiked[col] = pre_processing.despiking_ROBUST(array_to_despike,
+                                                             window_length)
+
+
+del data # cleaning environment
+
+
 
 # salvataggio intermedio
 

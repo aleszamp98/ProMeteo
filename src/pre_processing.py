@@ -91,40 +91,66 @@ def linear_interp(left_border, right_border, n_points):
 def identify_interp_spikes(beyond_bounds_mask, max_consecutive_spikes):
     return array_modified, spike_flag
 
-def data_despiking_VM97(data: pd.DataFrame,
-                        window_length : int,
-                        max_consecutive_spikes : int,
-                        max_iterations : int,
-                        c_h: float,
-                        c_v: float,
-                        c_T: float,
-                        ) -> pd.DataFrame:
-    data_despiked = pd.DataFrame(index=data.index, columns=data.columns)
-    c_list = [c_h, c_h, c_v, c_T]
-    c_increment=0.1
+def identify_interp_spikes(array, mask, n_max_spike):
 
-    for col, c in zip(['u', 'v', 'w', 'T_s'], c_list):
-        array_to_despike = data[col].to_numpy()
-        spike_flag = True
-        iteration = 0
-        while spike_flag and iteration < max_iterations:
-            running_mean, running_std = running_stats(array_to_despike, window_length)
-            upper_bound = running_mean+c*running_std
-            lower_bound = running_mean-c*running_std
-            beyond_bounds_mask = (array_to_despike > upper_bound) | (array_to_despike < lower_bound)
-            array_despiked, spike_flag = identify_interp_spikes(beyond_bounds_mask, max_consecutive_spikes)
-            c += c_increment # at each iteration the threshold increment their distance 
-            iteration += 1
-            del running_mean, running_std, upper_bound, lower_bound, beyond_bounds_mask
+    dum=False
+    count_spike_day=0
+    count_spike=0
+    N=len(array)
 
-        data_despiked[col] = array_despiked
-        del array_despiked
+    for i in range(N):
+        if mask[i]:
+            if dum==False:
+                spike_index=[i] #mi salvo le posizioni delle spike, la lunghezza di questo array definisce quante spike si susseguono
+                dum=True
+            else:
+                spike_index.append(i)
+        else:
+            if dum==True:
+                M=len(spike_index)
+                if M<=n_max_spike:
+                    #interpolazione lineare
+                    y_0=array[spike_index[0]-1] #valore primo vicino a sinistra
+                    y_1=array[spike_index[-1]+1] #valore primo vicino a destra
+                    diff=y_1-y_0
+                    x=np.arange(1, M+1) #(1,2,3)
+                    array[spike_index]=y_0+x*diff/(M+1)                  
+                    dum=False #azzero il flag del contatore
+                    count_spike=count_spike+1
+                    count_spike_day=count_spike_day+1
+                else:
+                    dum=False #azzero il flag del contatore
+                    del spike_index
+    return array, count_spike
 
-    return data_despiked
+
+def despiking_VM97(array_to_despike : np.ndarray,
+                   c : float,
+                   window_length : int,
+                   max_consecutive_spikes : int,
+                   max_iterations : int
+                   ) -> np.ndarray :
+    spike_flag = True
+    iteration = 0
+    c_increment = 0.1
+    while spike_flag and iteration < max_iterations:
+        running_mean, running_std = running_stats(array_to_despike, 
+                                                  window_length)
+        upper_bound = running_mean+c*running_std
+        lower_bound = running_mean-c*running_std
+        beyond_bounds_mask = (array_to_despike > upper_bound) | (array_to_despike < lower_bound)
+        array_despiked, spike_flag = identify_interp_spikes(beyond_bounds_mask, 
+                                                            max_consecutive_spikes)
+        c += c_increment # at each iteration the bounds increment their distance 
+        iteration += 1
+    return array_despiked
 
 
 
-def data_despiking_ROBUST(data : pd.DataFrame) -> pd.DataFrame:
+
+
+
+def despiking_ROBUST(data : pd.DataFrame) -> pd.DataFrame:
 
     data_despiked=data
 
