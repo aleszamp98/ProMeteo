@@ -39,7 +39,7 @@ horizontal_threshold = params['horizontal_threshold']
 vertical_threshold = params['vertical_threshold']
 temperature_threshold = params['temperature_threshold']
 despiking_mode = params['despiking_mode']
-window_length = params['window_length']
+window_length_despiking = params['window_length_despiking']
 max_n_consecutive_values = params['max_n_consecutive_values']
 max_iterations = params['max_iterations']
 c_H = params['c_H']
@@ -75,11 +75,15 @@ logger.info(f"Removing exceeding values completed.")
 logger.info(f"""
             Running despiking.
             """)
+
+window_length_despiking_points = core.min_to_points(sampling_freq, 
+                                          window_length_despiking)
 data_despiked = pd.DataFrame(index=data.index, columns=data.columns)
+
 if despiking_mode == "VM97":
     logger.info(f"""
                 - Mode: {despiking_mode}
-                - Moving window length: {window_length}
+                - Moving window length: {window_length_despiking} min => {window_length_despiking_points} points
                 - Maximum number of consecutive values to be considered spike: {max_n_consecutive_values}
                 - Maximum number of iterations to perform: {max_iterations}
                 - Starting values of c:
@@ -92,19 +96,19 @@ if despiking_mode == "VM97":
         array_to_despike = data[col].to_numpy()
 
         data_despiked[col] = pre_processing.despiking_VM97(array_to_despike,
-                                                                 c,
-                                                                 window_length,
-                                                                 max_n_consecutive_values,
-                                                                 max_iterations)
+                                                           c,
+                                                           window_length_despiking_points,
+                                                           max_n_consecutive_values,
+                                                           max_iterations)
 elif despiking_mode == "robust":
     logger.info(f"""
                 - Mode: {despiking_mode}
-                - Moving window length: {window_length}
+                - Moving window length: {window_length_despiking} min => {window_length_despiking_points} points
                 """)
     for col in ['u', 'v', 'w', 'T_s']:
         array_to_despike = data[col].to_numpy()
         data_despiked[col] = pre_processing.despiking_ROBUST(array_to_despike,
-                                                             window_length)
+                                                             window_length_despiking_points)
 
 
 del data # cleaning environment

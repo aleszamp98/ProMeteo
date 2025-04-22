@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 from typing import Tuple
+import core
 
 
 ## controllo se possiede un numero di entrate pari alla frequenza* delta_t compreso tra l'inzio e la fine del 
@@ -79,12 +80,6 @@ def remove_beyond_threshold(
 # definizione input: finestra in min per calcolo mobile, numero di valori consecutivi fuori soglia, costanti da cui partire:
 #  c_h (orizzontale), c_v (verticale), c_T (temp)
 
-# conviene trasferirla nel modulo core (perchè la media mobile è usata anche da reynolds module)
-def running_stats(array : np.ndarray,
-                  window_length : int) -> Tuple[np.ndarray, np.ndarray]:
-    
-    return running_mean, running_std
-
 def linear_interp(left_border, right_border, n_points):
     return interp_points
 
@@ -134,20 +129,17 @@ def despiking_VM97(array_to_despike : np.ndarray,
     iteration = 0
     c_increment = 0.1
     while spike_flag and iteration < max_iterations:
-        running_mean, running_std = running_stats(array_to_despike, 
+        running_mean, running_std = core.running_stats(array_to_despike, 
                                                   window_length)
         upper_bound = running_mean+c*running_std
         lower_bound = running_mean-c*running_std
         beyond_bounds_mask = (array_to_despike > upper_bound) | (array_to_despike < lower_bound)
-        array_despiked, spike_flag = identify_interp_spikes(beyond_bounds_mask, 
+        array_despiked, spike_flag = identify_interp_spikes(array_to_despike,
+                                                            beyond_bounds_mask, 
                                                             max_consecutive_spikes)
         c += c_increment # at each iteration the bounds increment their distance 
         iteration += 1
     return array_despiked
-
-
-
-
 
 
 def despiking_ROBUST(data : pd.DataFrame) -> pd.DataFrame:
@@ -156,3 +148,4 @@ def despiking_ROBUST(data : pd.DataFrame) -> pd.DataFrame:
 
 
     return data_despiked
+

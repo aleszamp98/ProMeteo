@@ -1,5 +1,7 @@
 import pytest
+from numpy.testing import assert_array_equal, assert_almost_equal
 import pandas as pd
+import numpy as np
 # import os 
 import sys
 import configparser
@@ -109,3 +111,72 @@ def test_invalid_timestamps(tmp_path):
 
     with pytest.raises(ValueError, match="non-valid"):
         core.import_data(file_path) #Test the exception in case of non-valid entries in the "Time" column
+
+##### testing core.min_to_points() #####
+
+def test_min_to_points():
+    assert core.min_to_points(1, 1) == 60 # 1 min, 1 Hz
+    assert core.min_to_points(10, 1) == 600 # 10 min, 1 Hz
+    assert core.min_to_points(5, 2) == 600 # 5 min, 2 Hz
+    assert core.min_to_points(10, 0) == 0 #  10 min, 0 Hz
+    assert core.min_to_points(0, 1) == 0 # 0 min, 1 Hz
+
+
+##### testing core.running_stats() #####
+
+def test_running_stats_odd_window():
+    array = np.array([1, 2, 3, 4, 5]) # test with odd window
+    window_length = 3
+    mean, std = core.running_stats(array, window_length)
+
+    expected_mean = np.array([1.333, 2.0, 3.0, 4.0, 4.667])
+    expected_std = np.array([0.471, 0.816, 0.816, 0.816, 0.471])
+
+    assert_almost_equal(mean, expected_mean, decimal=3)
+    assert_almost_equal(std, expected_std, decimal=3)
+
+def test_running_stats_even_window(): #test the raising of the warning for an even window
+    array = np.array([1, 2, 3, 4, 5])
+    window_length = 4
+
+    with pytest.warns(UserWarning, match="window_length is even"):
+        core.running_stats(array, window_length)
+
+def test_running_stats_with_nans():
+    # Test con NaN nell'array
+    array = np.array([1, 2, np.nan, 4, 5])
+    window_length = 3
+    mean, std = core.running_stats(array, window_length)
+
+    expected_mean = np.array([1.333, 1.5, 3.0, 4.500, 4.667]) #[0]: 1+1+2=4, 4/3=1.33; [1]: 1+2+NaN=3, 3/2=1.5; [2]: 2+NaN+4=6, 6/2=3; [3]: NaN+4+5=9, 9/2=4.5 ; [4]: 4+5+5=14, 14/3=4.66
+    expected_std = np.array([0.471, 0.5, 1, 0.5, 0.471]) 
+    # [0]: (1,1,2), mean = 1.333, deviations = (-0.333, -0.333, 0.667),
+    #       squared = (0.111, 0.111, 0.445), mean squared = 0.222, sqrt = 0.471
+
+    # [1]: (1,2,nan), mean = 1.5, deviations = (-0.5, 0.5),
+    #       squared = (0.25, 0.25), mean squared = 0.25, sqrt = 0.5
+
+    # [2]: (2,nan,4), mean = 3, deviations = (-1, 1),
+    #       squared = (1, 1), mean squared = 1, sqrt = 1
+
+    # [3]: (nan,4,5), mean = 4.5, deviations = (-0.5, 0.5),
+    #       squared = (0.25, 0.25), mean squared = 0.25, sqrt = 0.5
+
+    # [4]: (4,5,5), mean = 4.667, deviations = (-0.667, 0.333, 0.333),
+    #       squared = (0.445, 0.111, 0.111), mean squared = 0.222, sqrt = 0.471
+
+    assert_almost_equal(mean, expected_mean, decimal=3)
+    assert_almost_equal(std, expected_std, decimal=3)
+
+
+def test_running_stats_invalid_window():
+    array = np.array([1, 2, 3, 4, 5])
+    
+    with pytest.raises(ValueError): # zero length window
+        core.running_stats(array, window_length=0)
+
+    with pytest.raises(ValueError): # negative window length
+        core.running_stats(array, window_length=-1)
+
+    with pytest.raises(ValueError): # window is longer than the array
+        core.running_stats(array, window_length=6)

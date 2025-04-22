@@ -1,7 +1,10 @@
 import pandas as pd
+import numpy as np
 import os
 import configparser
-
+from typing import Tuple
+from numpy.lib.stride_tricks import sliding_window_view
+import warnings
 
 def load_config(path : str) -> dict:
     """
@@ -41,7 +44,7 @@ def load_config(path : str) -> dict:
         temperature_threshold_str = config.get('remove_beyond_threshold', 'temperature_threshold')
 
         despiking_mode = config.get('despiking', 'despiking_mode')
-        window_length = config.get('despiking', 'window_length')
+        window_length_despiking = config.get('despiking', 'window_length_despiking')
         max_n_consecutive_values = config.get('despiking', 'max_n_consecutive_values')
         max_iterations = config.get('despiking', 'max_iterations')
         c_H = config.get('despiking', 'c_H')
@@ -78,13 +81,13 @@ def load_config(path : str) -> dict:
     
     # control over passed inputs for despiking procedure
     try:
-        window_length = int(window_length)
+        window_length_despiking = int(window_length_despiking)
         max_n_consecutive_values = int(max_n_consecutive_values)
         max_iterations = int(max_iterations)
     except ValueError as e:
         raise ValueError(
-            "window_length, max_n_consecutive_values and max_iterations must be integers.\n"
-            f"Got: window_length='{window_length}', max_n_consecutive_values='{max_n_consecutive_values}' and max_iterations='{max_iterations}'"
+            "window_length_despiking, max_n_consecutive_values and max_iterations must be integers.\n"
+            f"Got: window_length_despiking='{window_length_despiking}', max_n_consecutive_values='{max_n_consecutive_values}' and max_iterations='{max_iterations}'"
         ) from e
     try:
         c_H = float(c_H)
@@ -104,7 +107,7 @@ def load_config(path : str) -> dict:
         'vertical_threshold': vertical_threshold,
         'temperature_threshold': temperature_threshold,
         'despiking_mode': despiking_mode,
-        'window_length' : window_length,
+        'window_length_despiking' : window_length_despiking,
         'max_n_consecutive_values' : max_n_consecutive_values,
         'max_iterations' : max_iterations,
         'c_H' : c_H,
@@ -161,3 +164,88 @@ def import_data(path : str) -> pd.DataFrame:
     data = data.set_index("Time") # "Time" col set as index
 
     return data
+
+def min_to_points(minutes: int,
+                  sampling_freq: int
+                  ) -> int:
+    """
+    Computes the number of data points contained in a signal of known sampling frequency
+    given the time lenght in minutes.
+
+    Parameters
+    ----------
+    minutes : int
+        Duration of the signal in minutes.
+    sampling_freq : int
+        Sampling frequency in Hz (samples per second).
+
+    Returns
+    -------
+    int
+        Total number of data points in the signal for the given duration.
+    """
+    n_points = sampling_freq * minutes * 60
+    return n_points
+
+def running_stats(array: np.ndarray, window_length: int) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Compute the running (moving) mean and standard deviation of a 1D array using a sliding window.
+
+    This function uses a centered sliding window of fixed length to calculate
+    the mean and standard deviation at each point in the input array. The array
+    is padded at the edges to allow computation at the boundaries.
+
+    NaN values within the window are ignored in the calculations.
+
+    Parameters
+    ----------
+    array : np.ndarray
+        Input 1D array of numerical values.
+    window_length : int
+        Length of the sliding window. Must be a positive odd integer less than or equal to the array length.
+
+    Returns
+    -------
+    running_mean : np.ndarray
+        Array of the same length as the input, containing the running mean.
+    running_std : np.ndarray
+        Array of the same length as the input, containing the running standard deviation.
+
+    Raises
+    ------
+    ValueError
+        If `window_length` is not a positive integer.
+        If `window_length` is greater than the length of the input array.
+
+    Warns
+    -----
+    UserWarning
+        If `window_length` is even, a warning is issued that using an even-length window may result in asymmetric behavior.
+
+    Notes
+    -----
+    The function pads the input array using edge values to maintain the original length
+    in the output. If the input contains NaNs, they are ignored in the mean and std computation
+    using `np.nanmean` and `np.nanstd`.
+    """
+    if not isinstance(window_length, int) or window_length <= 0:
+        raise ValueError("window_length must be a positive integer.")
+
+    if window_length > len(array):
+        raise ValueError("window_length must not be greater than the length of the array.")
+
+    if window_length % 2 == 0:
+        warnings.warn(
+            "window_length is even; using an even-length window may result in asymmetric behavior.",
+            UserWarning
+        )
+
+    half_window = window_length // 2
+
+    padded = np.pad(array, (half_window, half_window), mode='edge') # pad the array at the beginning and end, repeating the values at the edges
+    windows = sliding_window_view(padded, window_shape=window_length) # create sliding windows
+
+    running_mean = np.nanmean(windows, axis=1)
+    running_std = np.nanstd(windows, axis=1)
+
+    return running_mean, running_std
