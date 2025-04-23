@@ -243,24 +243,16 @@ def running_stats(array: np.ndarray,
     N = len(array)
     half_window = window_length // 2
 
+    padded_array = np.pad(array, (half_window, half_window), mode='edge')
+
     running_mean = np.full(N, np.nan)
     running_std = np.full(N, np.nan)
 
     for i in range(N):
-        # borders managment
-        if i < half_window:
-            idx_start = 0
-            idx_end = window_length
-        elif i >= N - half_window:
-            idx_start = N - window_length
-            idx_end = N
-        else:
-            idx_start = i - half_window
-            idx_end = i + half_window + 1
-
-        window = array[idx_start:idx_end]
-
-        running_mean[i] = np.nanmean(window) #ignore possible NaNs within the time series
+        # Finestra mobile centrata sull'indice i
+        window = padded_array[i:i + window_length]
+        
+        running_mean[i] = np.nanmean(window)  # Ignora i NaN nei calcoli
         running_std[i] = np.nanstd(window)
 
     return running_mean, running_std

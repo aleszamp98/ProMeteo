@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
-from typing import Tuple
+import logging
+from typing import Tuple, Optional
 from . import core
 
 
@@ -174,7 +175,8 @@ def despiking_VM97(array_to_despike: np.ndarray,
                    c: float,
                    window_length: int,
                    max_consecutive_spikes: int,
-                   max_iterations: int) -> np.ndarray:
+                   max_iterations: int,
+                   logger : Optional[logging.Logger]) -> np.ndarray:
     """
     Applies the despiking algorithm based on Vickers and Mahrt (1997) to remove spikes from a time series.
 
@@ -198,7 +200,10 @@ def despiking_VM97(array_to_despike: np.ndarray,
         Maximum number of consecutive spike points allowed for interpolation.
     max_iterations : int
         Maximum number of iterations to perform if spikes continue to be found.
-
+    logger : Optional[logging.Logger], default=None
+        A logger instance following the `logging.Logger` interface. If provided, the function will use it to
+        log dialogues during the despiking procedure. If set to `None`, the function will operate
+        silently without producing any log output.
     Returns:
     -------
     np.ndarray
@@ -217,30 +222,33 @@ def despiking_VM97(array_to_despike: np.ndarray,
     count_spike = 1  # value > 0 to enter the cycle
 
     while count_spike != 0 and iteration <= max_iterations:
-        print(f"Iteration: {iteration}")
         running_mean, running_std = core.running_stats(array_despiked, window_length)
-        print("Running stats computed")
+
+        if logger: logger.info(f"Iteration: {iteration}")
+
         upper_bound = running_mean + current_c * running_std
         lower_bound = running_mean - current_c * running_std
 
         beyond_bounds_mask = (array_despiked > upper_bound) | (array_despiked < lower_bound)
-        print(f"{np.sum(beyond_bounds_mask)}")
+
         array_despiked, count_spike = identify_interp_spikes(array_despiked,
                                                              beyond_bounds_mask,
                                                              max_consecutive_spikes)
-        print(f"{count_spike}")
+        
+        if logger: logger.info(f"Identified spikes: {count_spike}")
+
         current_c += c_increment  # increase the distance between the upper and lower bound
         iteration += 1
 
     return array_despiked
 
 
-def despiking_ROBUST(data : pd.DataFrame) -> pd.DataFrame:
+# def despiking_ROBUST(data : pd.DataFrame) -> pd.DataFrame:
 
-    data_despiked=data
+#     data_despiked=data
 
 
-    return data_despiked
+#     return data_despiked
 
 
 # def interp_nan(df, variable_list, test_mode, count_log, file_path, log_file, test_file):

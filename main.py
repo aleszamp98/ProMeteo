@@ -29,7 +29,9 @@ file_handler.setFormatter(formatter)
 console_handler.setFormatter(formatter)
 logger.addHandler(file_handler)
 logger.addHandler(console_handler)
-logger.info("ProMeteo")
+logger.info("""
+            ProMeteo
+            """)
 
 # parser definition and import the parameters of the run
 params = core.load_config(config_file_path)
@@ -57,7 +59,9 @@ logger.info(f"""
 
 # filling missing timestamps known sampling frequency
 data=pre_processing.fill_missing_timestamps(rawdata, sampling_freq)
-logger.info(f"Missing timestamps filling completed.")
+logger.info(f"""
+            Missing timestamps filling completed.
+            """)
 
 # non physical value cutting
 logger.info(f"""
@@ -70,7 +74,9 @@ data=pre_processing.remove_beyond_threshold(data,
                                             horizontal_threshold,
                                             vertical_threshold,
                                             temperature_threshold)
-logger.info(f"Removing exceeding values completed.")
+logger.info(f"""
+            Removing exceeding values completed.
+            """)
 
 # despiking
 logger.info(f"""
@@ -105,7 +111,9 @@ if despiking_mode == "VM97":
                                                            c,
                                                            window_length_despiking_points,
                                                            max_length_spike,
-                                                           max_iterations)
+                                                           max_iterations,
+                                                           logger
+                                                           )
 elif despiking_mode == "robust":
     logger.info(f"""
                 - Mode: {despiking_mode}
@@ -115,6 +123,9 @@ elif despiking_mode == "robust":
         array_to_despike = data[col].to_numpy()
         data_despiked[col] = pre_processing.despiking_ROBUST(array_to_despike,
                                                              window_length_despiking_points)
+
+# comparison between non-despiked and despiked time series
+
 
 
 del data # cleaning environment

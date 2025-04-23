@@ -2,6 +2,8 @@ import sys
 import os
 import pandas as pd
 import numpy as np
+import logging
+from unittest.mock import MagicMock
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import src.core as core
 import src.pre_processing as pre_processing
@@ -141,3 +143,133 @@ def test_multiple_spikes():
     result, count = pre_processing.identify_interp_spikes(array.copy(), mask, max_length)
     np.testing.assert_almost_equal(result, expected, decimal=3)
     assert count == 2
+
+##### testing pre_processing.despiking_VM97() #####
+
+def test_no_spikes():
+    signal = np.ones(100)
+    result = pre_processing.despiking_VM97(signal,
+                            c=2.0, 
+                            window_length=5, 
+                            max_consecutive_spikes=3, 
+                            max_iterations=5, 
+                            logger=None)
+    np.testing.assert_array_equal(result, signal)
+
+def generate_data_with_spikes(size: int,
+                              spike_indices: list,
+                              spike_value: float) -> np.ndarray:
+    data = np.random.normal(loc=1, scale=1, size=size) # values normal distributed around mean=1, with std_dev=1
+    for idx in spike_indices:
+        data[idx] = spike_value
+    return data
+
+
+def test_despiking_removes_spikes():
+    # tests that the function removes peaks from a sequence with well-spaced peaks
+    size =1*60*60*1 # 1 Hz signal, duration: 1h => 3600 points
+    # spikes at 15 min, 30 min, 45 min after the start
+    spike_indices = [900, 1800, 2700]  # idices of the spikes
+    spike_value = 20  # Value possibly greater than the bounds: 1*3+1=5 (see after)
+    array = generate_data_with_spikes(size,
+                                      spike_indices,
+                                      spike_value)
+    
+    # input parameters for the data creation function
+    c = 3.0
+    window_length = 5*60+1 # (5min window length + 1 to obtain odd number of points)
+    max_consecutive_spikes = 3
+    max_iterations = 10
+
+    despiked_array = pre_processing.despiking_VM97(array,
+                                    c=c,
+                                    window_length=window_length,
+                                    max_consecutive_spikes=max_consecutive_spikes,
+                                    max_iterations=max_iterations,
+                                    logger=None)
+    
+    for idx in spike_indices:
+        assert abs(despiked_array[idx]) < 10, f"Spike at index {idx} was not removed: value {despiked_array[idx]}"
+
+
+def test_despiking_preserves_normal_values():
+    # tests that the function doesn't remove non-spike values, 
+    size =1*60*60*1 # 1 Hz signal, duration: 1h => 3600 points
+    array = generate_data_with_spikes(size, [], 0) # no spikes
+    
+    # Parametri di input per la funzione
+    c = 5.0
+    window_length = 5
+    max_consecutive_spikes = 2
+    max_iterations = 10
+    
+    # Esegui la funzione
+    despiked_array = pre_processing.despiking_VM97(array,
+                                    c=c,
+                                    window_length=window_length,
+                                    max_consecutive_spikes=max_consecutive_spikes,
+                                    max_iterations=max_iterations,
+                                    logger=None)
+    
+    assert np.allclose(array, despiked_array, atol=1e-2), "Non-spike values incorrectly modified."
+
+def test_despiking_stops_on_max_iterations(monkeypatch):
+    # Falso array con spike che non scompariranno mai
+    input_array = np.array([1.0]*10 + [100.0] + [1.0]*10)
+
+    # Mock delle funzioni esterne
+    def mock_running_stats(arr, window_length):
+        mean = np.ones_like(arr)  # media costante
+        std = np.ones_like(arr)   # deviazione standard costante
+        return mean, std
+
+    def mock_identify_interp_spikes(arr, mask, max_consecutive_spikes):
+        return arr, 1  # simula spike costanti, mai 0
+
+    monkeypatch.setattr(core, "running_stats", mock_running_stats)
+    monkeypatch.setattr("src.pre_processing.identify_interp_spikes", mock_identify_interp_spikes)
+
+    mock_logger = MagicMock()
+    max_iter = 3
+
+    temp_array = pre_processing.despiking_VM97(
+        array_to_despike=input_array,
+        c=2.0,
+        window_length=5,
+        max_consecutive_spikes=1,
+        max_iterations=max_iter,
+        logger=mock_logger
+    )
+
+    # Verifica che il numero di iterazioni loggate corrisponda a max_iterations + 1
+    logged_iterations = [call for call in mock_logger.info.call_args_list if "Iteration" in str(call)]
+    assert len(logged_iterations) == max_iter + 1  # Iterazioni: 0, 1, ..., max_iter
+
+
+def test_logger_usage(caplog):
+    # tests that the function removes peaks from a sequence with well-spaced peaks
+    size =1*60*60*1 # 1 Hz signal, duration: 1h => 3600 points
+    # spikes at 15 min, 30 min, 45 min after the start
+    spike_indices = [900, 1800, 2700]  # idices of the spikes
+    spike_value = 20  # Value possibly greater than the bounds: 1*3+1=5 (see after)
+    array = generate_data_with_spikes(size,
+                                      spike_indices,
+                                      spike_value)
+    
+    # input parameters for the data creation function
+    c = 3.0
+    window_length = 5*60+1 # (5min window length + 1 to obtain odd number of points)
+    max_consecutive_spikes = 3
+    max_iterations = 10
+    
+    # Esegui la funzione con il logger
+    with caplog.at_level(logging.INFO):
+        pre_processing.despiking_VM97(array,
+                       c=c,
+                       window_length=window_length,
+                       max_consecutive_spikes=max_consecutive_spikes,
+                       max_iterations=max_iterations,
+                       logger=logging.getLogger())
+    
+    # Verifica che il logger abbia registrato informazioni sull'iterazione
+    assert "Iteration:" in caplog.text, "Logger did not record any string 'iteration'"
