@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import os
+import matplotlib.pyplot as plt
 
 
 dir_out=os.path.dirname(os.path.abspath(__file__))+"/"
@@ -19,9 +20,22 @@ T_s=np.random.normal(loc=20, scale=1, size=n_rows) # [°C]
 time_start=pd.to_datetime("2012-09-28 02:00:00")
 time_end=time_start+pd.Timedelta(minutes=length)
 time_array=pd.date_range(start=time_start, end=time_end, freq=f"{dt}ms")
-
 df=pd.DataFrame({"Time":time_array, "u":u, "v":v, "w":w, "T_s":T_s})
+df["Time"] = pd.to_datetime(df["Time"])
+df = df.set_index("Time")
+
+# values over threshold
+first_over=pd.date_range(start="2012-09-28 02:30:00.000", end="2012-09-28 02:30:00.100", freq=f"{dt}ms")
+df.loc[first_over, "u"]= 100
+
+# spike
+spike_01=pd.date_range(start="2012-09-28 02:15:00.000", end="2012-09-28 02:15:00.100", freq=f"{dt}ms")
+df.loc[spike_01, "u"]= 10
+
+df.index.name = "Time"
 df.to_csv(f"{dir_out}{name_out}.csv",
-            index=False,
             na_rep='NaN',
             float_format='%.7e')
+
+plt.plot(df.index, df["u"])
+plt.savefig("plot.png")

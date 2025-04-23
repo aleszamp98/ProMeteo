@@ -2,12 +2,11 @@ import pytest
 from numpy.testing import assert_array_equal, assert_almost_equal
 import pandas as pd
 import numpy as np
-# import os 
 import sys
-import configparser
-from pathlib import Path
-sys.path.append(str(Path(__file__).resolve().parent.parent / "src"))
-import core
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+import src.core as core
+
 
 
 ##### testing core.load_config() #####

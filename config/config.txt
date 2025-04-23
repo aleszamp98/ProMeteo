@@ -9,7 +9,7 @@ sampling_freq = 20
 [remove_beyond_threshold]
 horizontal_threshold = 30
 vertical_threshold = 5
-temperature_threshold = 19
+temperature_threshold = 50
 
 [despiking]
 # despiking mode, two options: VM97 to execute (Vickers and Mahrt, 1997) procedure or ROBUST, see documentation.
@@ -19,8 +19,8 @@ window_length_despiking = 5
 # maximum number of consecutive values over computed bounds to identify as spike
 max_length_spike = 3
 # iteration at which to stop the process
-max_iterations = 5
+max_iterations = 3
 # starting constants for the definition of the upper and lower bounds (for the VM97 mode only)
-c_H = 3
-c_V = 3
-c_T = 1
+c_H = 3.5
+c_V = 5
+c_T = 3.5

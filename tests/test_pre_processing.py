@@ -1,9 +1,11 @@
+import sys
+import os
 import pandas as pd
 import numpy as np
-from pathlib import Path
-import sys
-sys.path.append(str(Path(__file__).resolve().parent.parent / "src"))
-import pre_processing
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+import src.core as core
+import src.pre_processing as pre_processing
+
 
 ##### testing pre_processing.test_fill_missing_regular_case() #####
 

@@ -1,8 +1,7 @@
 import pandas as pd
 import numpy as np
 from typing import Tuple
-import core
-
+import src.core as core
 
 ## controllo se possiede un numero di entrate pari alla frequenza* delta_t compreso tra l'inzio e la fine del 
 def fill_missing_timestamps(data: pd.DataFrame, freq: float) -> pd.DataFrame:
@@ -213,21 +212,22 @@ def despiking_VM97(array_to_despike: np.ndarray,
     iteration = 0
     c_increment = 0.1
     current_c = c
-    array_despiked = array_to_despike.copy()
+    # array_despiked = array_to_despike.copy()
     count_spike = 1  # value > 0 to enter the cycle
 
     while count_spike != 0 and iteration <= max_iterations:
-        running_mean, running_std = core.running_stats(array_despiked, window_length)
-        
+        print(f"Iteration: {iteration}")
+        running_mean, running_std = core.running_stats(array_to_despike, window_length)
+        print("Running stats computed")
         upper_bound = running_mean + current_c * running_std
         lower_bound = running_mean - current_c * running_std
 
-        beyond_bounds_mask = (array_despiked > upper_bound) | (array_despiked < lower_bound)
-
-        array_despiked, count_spike = identify_interp_spikes(array_despiked,
+        beyond_bounds_mask = (array_to_despike > upper_bound) | (array_to_despike < lower_bound)
+        print(f"{np.sum(beyond_bounds_mask)}")
+        array_despiked, count_spike = identify_interp_spikes(array_to_despike,
                                                              beyond_bounds_mask,
                                                              max_consecutive_spikes)
-
+        print(f"{count_spike}")
         current_c += c_increment  # increase the distance between the upper and lower bound
         iteration += 1
 

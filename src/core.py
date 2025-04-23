@@ -45,7 +45,7 @@ def load_config(path : str) -> dict:
 
         despiking_mode = config.get('despiking', 'despiking_mode')
         window_length_despiking = config.get('despiking', 'window_length_despiking')
-        max_n_consecutive_values = config.get('despiking', 'max_n_consecutive_values')
+        max_length_spike = config.get('despiking', 'max_length_spike')
         max_iterations = config.get('despiking', 'max_iterations')
         c_H = config.get('despiking', 'c_H')
         c_V = config.get('despiking', 'c_V')
@@ -82,12 +82,12 @@ def load_config(path : str) -> dict:
     # control over passed inputs for despiking procedure
     try:
         window_length_despiking = int(window_length_despiking)
-        max_n_consecutive_values = int(max_n_consecutive_values)
+        max_length_spike = int(max_length_spike)
         max_iterations = int(max_iterations)
     except ValueError as e:
         raise ValueError(
-            "window_length_despiking, max_n_consecutive_values and max_iterations must be integers.\n"
-            f"Got: window_length_despiking='{window_length_despiking}', max_n_consecutive_values='{max_n_consecutive_values}' and max_iterations='{max_iterations}'"
+            "window_length_despiking, max_length_spike and max_iterations must be integers.\n"
+            f"Got: window_length_despiking='{window_length_despiking}', max_length_spike='{max_length_spike}' and max_iterations='{max_iterations}'"
         ) from e
     try:
         c_H = float(c_H)
@@ -108,7 +108,7 @@ def load_config(path : str) -> dict:
         'temperature_threshold': temperature_threshold,
         'despiking_mode': despiking_mode,
         'window_length_despiking' : window_length_despiking,
-        'max_n_consecutive_values' : max_n_consecutive_values,
+        'max_length_spike' : max_length_spike,
         'max_iterations' : max_iterations,
         'c_H' : c_H,
         'c_V' : c_V,
@@ -202,7 +202,7 @@ def running_stats(array: np.ndarray, window_length: int) -> Tuple[np.ndarray, np
     array : np.ndarray
         Input 1D array of numerical values.
     window_length : int
-        Length of the sliding window. Must be a positive odd integer less than or equal to the array length.
+        Number of points within the sliding window. Must be a positive odd integer less than or equal to the array length.
 
     Returns
     -------

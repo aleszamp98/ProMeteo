@@ -2,6 +2,7 @@
 import numpy as np
 import pandas as pd
 import matplotlib as plt
+import sys
 import os
 import logging
 
@@ -78,6 +79,8 @@ logger.info(f"""
 
 window_length_despiking_points = core.min_to_points(sampling_freq, 
                                           window_length_despiking)
+if window_length_despiking_points % 2 == 0:
+    window_length_despiking_points += 1
 data_despiked = pd.DataFrame(index=data.index, columns=data.columns)
 
 if despiking_mode == "VM97":
@@ -93,6 +96,9 @@ if despiking_mode == "VM97":
                 """)
     c_list = [c_H, c_H, c_V, c_T] # starting constants
     for col, c in zip(['u', 'v', 'w', 'T_s'], c_list):
+        logger.info(f"""
+                    Despiking variable {col}
+                    """)
         array_to_despike = data[col].to_numpy()
 
         data_despiked[col] = pre_processing.despiking_VM97(array_to_despike,
