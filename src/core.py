@@ -3,7 +3,6 @@ import numpy as np
 import os
 import configparser
 from typing import Tuple
-from numpy.lib.stride_tricks import sliding_window_view
 import warnings
 
 def load_config(path : str) -> dict:
