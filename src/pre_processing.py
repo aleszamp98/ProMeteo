@@ -12,15 +12,15 @@ def fill_missing_timestamps(data: pd.DataFrame, freq: float) -> pd.DataFrame:
     the first and last entry, based on the given frequency. Missing timestamps 
     are added with NaN values for all columns.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     data : pd.DataFrame
         DataFrame with a datetime index.
     freq : float
         Sampling frequency in Hertz (Hz).
 
-    Returns:
-    --------
+    Returns
+    -------
     pd.DataFrame
         DataFrame reindexed to include all expected timestamps.
     """
