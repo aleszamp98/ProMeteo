@@ -44,8 +44,8 @@ def remove_beyond_threshold(
     Replaces values exceeding specific thresholds in the columns "u", "v", "w", and "T_s" with NaN.
     The threshold definition is
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     data : pd.DataFrame
         DataFrame with columns "u", "v", "w", and "T_s" and datetime index.
     horizontal_threshold : float
@@ -55,13 +55,13 @@ def remove_beyond_threshold(
     temperature_threshold : float
         Threshold for sonic temperature "T_s".
 
-    Returns:
-    --------
+    Returns
+    -------
     - pd.DataFrame
         The cleaned DataFrame with outliers replaced by NaN.
 
-    Notes:
-    ------
+    Notes
+    -----
     The distinction of thresholds into horizontal and vertical is based on the fact that
     horizontal motions are usually more intense than vertical motions by two or more
     orders of magnitude.
@@ -102,6 +102,7 @@ def linear_interp(left_value : float,
     -------
     np.ndarray
         An array containing the interpolated values.
+
     """
     # Create an array of relative indices for the length
     x = np.arange(1, length + 1)
@@ -123,7 +124,7 @@ def identify_interp_spikes(array: np.ndarray,
     the spike values with interpolated ones. If the spike is at the boundary of the array (either at the start
     or at the end), interpolation is not performed.
 
-    Parameters:
+    Parameters
     ----------
     array : np.ndarray
         The array containing the data to be processed.
@@ -132,16 +133,17 @@ def identify_interp_spikes(array: np.ndarray,
     max_length_spike : int
         The maximum length of consecutive True values in the mask to be considered a spike.
 
-    Returns:
+    Returns
     -------
     tuple[np.ndarray, int]
         A tuple containing the modified array with interpolated spike values and the total count of detected spikes.
     
-    Notes:
-    ------
+    Notes
+    -----
     - If either the left or right neighbor is missing (i.e., the spike is at
       the boundary), the spike is not interpolated.
     - Only sequences of True values that are smaller than or equal to `max_length_spike` are considered spikes.
+    
     """
     flag = False
     count_spike = 0
@@ -188,7 +190,7 @@ def despiking_VM97(array_to_despike: np.ndarray,
     The threshold `c` is incrementally increased after each iteration.
     The process stops when no more spikes are detected or when `max_iterations` is reached.
 
-    Parameters:
+    Parameters
     ----------
     array_to_despike : np.ndarray
         The input 1D array containing the signal to be despiked.
@@ -204,12 +206,13 @@ def despiking_VM97(array_to_despike: np.ndarray,
         A logger instance following the `logging.Logger` interface. If provided, the function will use it to
         log dialogues during the despiking procedure. If set to `None`, the function will operate
         silently without producing any log output.
-    Returns:
+    
+    Returns
     -------
     np.ndarray
         The despiked version of the input array.
     
-    References:
+    References
     ----------
     Vickers, D., & Mahrt, L. (1997). Quality control and flux sampling problems for tower and aircraft data.
     Journal of Atmospheric and Oceanic Technology, 14(3), 512–526. https://doi.org/10.1175/1520-0426(1997)014<0512:QCAFSP>2.0.CO;2
