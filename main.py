@@ -60,8 +60,11 @@ logger.info(f"""
 # filling missing timestamps known sampling frequency
 data=pre_processing.fill_missing_timestamps(rawdata, sampling_freq)
 logger.info(f"""
-            Missing timestamps filling completed.
+            Missing timestamps filling completed:
+            Number of timestamps in the rawdata package: {rawdata.shape[0]}
+            Number of timestamps after the filling procedure: {data.shape[0]}
             """)
+del rawdata
 
 # non physical value cutting
 logger.info(f"""

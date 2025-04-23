@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import logging
 from typing import Tuple, Optional
-from . import core
+from src import core
 
 
 ## controllo se possiede un numero di entrate pari alla frequenza* delta_t compreso tra l'inzio e la fine del 
