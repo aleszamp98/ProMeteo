@@ -17,7 +17,7 @@ extensions = [
 
 templates_path = ['_templates']
 exclude_patterns = []
-
+# napoleon_numpy_docstring = True
 
 
 # -- Options for HTML output -------------------------------------------------
