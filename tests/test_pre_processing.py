@@ -4,9 +4,11 @@ import pandas as pd
 import numpy as np
 import logging
 from unittest.mock import MagicMock
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-import src.core as core
-import src.pre_processing as pre_processing
+# sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+# import src.core as core
+# import src.pre_processing as pre_processing
+import pre_processing
+import core
 
 
 ##### testing pre_processing.test_fill_missing_regular_case() #####
@@ -227,7 +229,7 @@ def test_despiking_stops_on_max_iterations(monkeypatch):
         return arr, 1  # simula spike costanti, mai 0
 
     monkeypatch.setattr(core, "running_stats", mock_running_stats)
-    monkeypatch.setattr("src.pre_processing.identify_interp_spikes", mock_identify_interp_spikes)
+    monkeypatch.setattr("pre_processing.identify_interp_spikes", mock_identify_interp_spikes)
 
     mock_logger = MagicMock()
     max_iter = 3

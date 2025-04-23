@@ -1,0 +1,15 @@
+[project]
+name = "ProMeteo"
+version = "1.0.0"
+description = ""
+authors = [{ name = "Alessandro Zampella"}]
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]

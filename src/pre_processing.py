@@ -2,8 +2,8 @@ import pandas as pd
 import numpy as np
 import logging
 from typing import Tuple, Optional
-import src.core as core
-
+# import src.core as core
+import core
 
 ## controllo se possiede un numero di entrate pari alla frequenza* delta_t compreso tra l'inzio e la fine del 
 def fill_missing_timestamps(data: pd.DataFrame, freq: float) -> pd.DataFrame:
