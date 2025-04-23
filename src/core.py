@@ -187,7 +187,9 @@ def min_to_points(minutes: int,
     n_points = sampling_freq * minutes * 60
     return n_points
 
-def running_stats(array: np.ndarray, window_length: int) -> Tuple[np.ndarray, np.ndarray]:
+def running_stats(array: np.ndarray, 
+                  window_length: int
+                  ) -> Tuple[np.ndarray, np.ndarray]:
     """
     Compute the running (moving) mean and standard deviation of a 1D array using a sliding window.
 
@@ -237,15 +239,28 @@ def running_stats(array: np.ndarray, window_length: int) -> Tuple[np.ndarray, np
     if window_length % 2 == 0:
         warnings.warn(
             "window_length is even; using an even-length window may result in asymmetric behavior.",
-            UserWarning
-        )
-
+            UserWarning)
+    N = len(array)
     half_window = window_length // 2
 
-    padded = np.pad(array, (half_window, half_window), mode='edge') # pad the array at the beginning and end, repeating the values at the edges
-    windows = sliding_window_view(padded, window_shape=window_length) # create sliding windows
+    running_mean = np.full(N, np.nan)
+    running_std = np.full(N, np.nan)
 
-    running_mean = np.nanmean(windows, axis=1)
-    running_std = np.nanstd(windows, axis=1)
+    for i in range(N):
+        # borders managment
+        if i < half_window:
+            idx_start = 0
+            idx_end = window_length
+        elif i >= N - half_window:
+            idx_start = N - window_length
+            idx_end = N
+        else:
+            idx_start = i - half_window
+            idx_end = i + half_window + 1
+
+        window = array[idx_start:idx_end]
+
+        running_mean[i] = np.nanmean(window) #ignore possible NaNs within the time series
+        running_std[i] = np.nanstd(window)
 
     return running_mean, running_std
