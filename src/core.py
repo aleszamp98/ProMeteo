@@ -196,8 +196,6 @@ def running_stats(array: np.ndarray,
     the mean and standard deviation at each point in the input array. The array
     is padded at the edges to allow computation at the boundaries.
 
-    NaN values within the window are ignored in the calculations.
-
     Parameters
     ----------
     array : np.ndarray
@@ -225,8 +223,8 @@ def running_stats(array: np.ndarray,
 
     Notes
     -----
-    The function pads the input array using edge values to maintain the original length
-    in the output. If the input contains NaNs, they are ignored in the mean and std computation
+    - The function pads the input array using constant values equals to the edge values of the array.
+    - If the input contains NaNs, they are ignored in the mean and std computation
     using `np.nanmean` and `np.nanstd`.
     """
     if not isinstance(window_length, int) or window_length <= 0:

@@ -56,6 +56,7 @@ logger.info(f"""
             Selected sampling frequency: {sampling_freq}
             Raw Data imported from: {rawdata_path}
             """)
+col_list=['u', 'v', 'w', 'T_s'] #Time as index
 
 # filling missing timestamps known sampling frequency
 data=pre_processing.fill_missing_timestamps(rawdata, sampling_freq)
@@ -67,19 +68,22 @@ logger.info(f"""
 del rawdata
 
 # non physical value cutting
-logger.info(f"""
-            Removing values from time series that exceed the following thresholds:
-            - Horizontal threshold: {horizontal_threshold}
-            - Vetical threshold: {vertical_threshold}
-            - Temperature threshold: {temperature_threshold}
+threshold_list = [horizontal_threshold,
+                  horizontal_threshold,
+                  vertical_threshold,
+                  temperature_threshold]
+
+data_cleaned = pd.DataFrame(index=data.index, columns=data.columns)
+
+for col, threshold in zip(col_list, threshold_list):
+    array_to_clean = data[col].to_numpy()
+    data_cleaned[col], count_beyond = pre_processing.remove_beyond_threshold(array_to_clean,
+                                                               threshold)
+    logger.info(f"""
+            {count_beyond} points beyond {threshold} removed from '{col}' time series
             """)
-data=pre_processing.remove_beyond_threshold(data,
-                                            horizontal_threshold,
-                                            vertical_threshold,
-                                            temperature_threshold)
-logger.info(f"""
-            Removing exceeding values completed.
-            """)
+    
+del data
 
 # despiking
 logger.info(f"""
@@ -90,7 +94,7 @@ window_length_despiking_points = core.min_to_points(sampling_freq,
                                           window_length_despiking)
 if window_length_despiking_points % 2 == 0:
     window_length_despiking_points += 1
-data_despiked = pd.DataFrame(index=data.index, columns=data.columns)
+data_despiked = pd.DataFrame(index=data_cleaned.index, columns=data_cleaned.columns)
 
 if despiking_mode == "VM97":
     logger.info(f"""
@@ -104,11 +108,11 @@ if despiking_mode == "VM97":
                     - For the sonic temperature: {c_T}
                 """)
     c_list = [c_H, c_H, c_V, c_T] # starting constants
-    for col, c in zip(['u', 'v', 'w', 'T_s'], c_list):
+    for col, c in zip(col_list, c_list):
         logger.info(f"""
                     Despiking variable {col}
                     """)
-        array_to_despike = data[col].to_numpy()
+        array_to_despike = data_cleaned[col].to_numpy()
 
         data_despiked[col] = pre_processing.despiking_VM97(array_to_despike,
                                                            c,
@@ -131,7 +135,7 @@ elif despiking_mode == "robust":
 
 
 
-del data # cleaning environment
+del data_cleaned # cleaning environment
 
 
 

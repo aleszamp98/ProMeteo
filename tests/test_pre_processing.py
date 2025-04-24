@@ -55,42 +55,42 @@ def test_negative_frequency():
 
 ##### testing remove_beyond_threshold() #####
 
-def test_remove_beyond_threshold():
-    # fictious DataFrame
-    data = pd.DataFrame({
-        'u': [5.0, 10.1, -9.9],      # [1] beyond threshold
-        'v': [0.0, -15.0, 10.0],     # [1] beyond threshold
-        'w': [0.05, -0.1, 0.2],      # [2] beyond threshold
-        'T_s': [19.9, -20.0, 25.0]   # [2] beyond threshold
-    }, index=pd.date_range("2022-01-01", periods=3, freq="s"))
+def test_remove_beyond_threshold_basic():
+    array = np.array([1.0, 5.0, -7.0, 3.0, -10.0])
+    threshold = 6.0
+    expected_clean = np.array([1.0, 5.0, np.nan, 3.0, np.nan])
+    expected_count = 2
 
-    horizontal_threshold = 10.0
-    vertical_threshold = 0.1
-    temperature_threshold = 20.0
+    result_array, count = pre_processing.remove_beyond_threshold(array, threshold)
 
-    cleaned = pre_processing.remove_beyond_threshold(
-        data,
-        horizontal_threshold,
-        vertical_threshold,
-        temperature_threshold
-    )
+    assert count == expected_count, "Incorrect number of values replaced"
+    assert np.allclose(result_array[:2], expected_clean[:2], equal_nan=True)
+    assert np.allclose(result_array[3], expected_clean[3], equal_nan=True)
+    assert np.isnan(result_array[2]) and np.isnan(result_array[4]), "Values beyond threshold not replaced with NaN"
 
-    # "u"
-    assert not np.isnan(cleaned.loc[data.index[0], 'u'])  # 5.0 < 10
-    assert np.isnan(cleaned.loc[data.index[1], 'u'])      # 10.1 > 10
-    assert not np.isnan(cleaned.loc[data.index[2], 'u'])  # 9.9 < 10
-    # "v"
-    assert not np.isnan(cleaned.loc[data.index[0], 'v'])  # 0.0 < 10
-    assert np.isnan(cleaned.loc[data.index[1], 'v'])      # 15.0 > 10
-    assert not np.isnan(cleaned.loc[data.index[2], 'v'])  # 10.0 == 10 => OK
-    # "w"
-    assert not np.isnan(cleaned.loc[data.index[0], 'w'])  # 0.05 < 0.1
-    assert not np.isnan(cleaned.loc[data.index[1], 'w'])  # 0.1 == 0.1 => OK
-    assert np.isnan(cleaned.loc[data.index[2], 'w'])      # 0.2 > 0.1
-    # "T_s"
-    assert not np.isnan(cleaned.loc[data.index[0], 'T_s'])  # 19.9 < 20
-    assert not np.isnan(cleaned.loc[data.index[1], 'T_s'])  # 20.0 == 20 => OK
-    assert np.isnan(cleaned.loc[data.index[2], 'T_s'])      # 25.0 > 20
+def test_remove_beyond_threshold_no_replacement():
+    array = np.array([1.0, 2.0, -2.5])
+    threshold = 5.0
+    result_array, count = pre_processing.remove_beyond_threshold(array, threshold)
+
+    assert count == 0, "No values should be replaced"
+    assert np.array_equal(result_array, array), "Array should remain unchanged"
+
+def test_remove_beyond_threshold_all_replaced():
+    array = np.array([100.0, -200.0, 300.0])
+    threshold = 50.0
+    result_array, count = pre_processing.remove_beyond_threshold(array, threshold)
+
+    assert count == 3, "All values should be replaced"
+    assert np.all(np.isnan(result_array)), "All values should be NaN"
+
+def test_remove_beyond_threshold_empty_array():
+    array = np.array([])
+    threshold = 10.0
+    result_array, count = pre_processing.remove_beyond_threshold(array, threshold)
+
+    assert count == 0, "Empty array should result in zero replacements"
+    assert result_array.size == 0, "Result should be an empty array"
 
 ##### testing pre_precessing.linear_interp() #####
 

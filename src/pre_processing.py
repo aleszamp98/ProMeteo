@@ -35,47 +35,33 @@ def fill_missing_timestamps(data: pd.DataFrame, freq: float) -> pd.DataFrame:
     return complete_data
     
 def remove_beyond_threshold(
-    data: pd.DataFrame,
-    horizontal_threshold: float,
-    vertical_threshold: float,
-    temperature_threshold: float
-    ) -> pd.DataFrame:
+    array: np.ndarray,
+    threshold: float,
+    ) -> Tuple[np.ndarray, int]:
     """
-    Replaces values exceeding specific thresholds in the columns "u", "v", "w", and "T_s" with NaN.
-    The threshold definition is
+    Replaces all values in the input array that exceed a given absolute threshold with NaN.
 
     Parameters
     ----------
-    data : pd.DataFrame
-        DataFrame with columns "u", "v", "w", and "T_s" and datetime index.
-    horizontal_threshold : float
-        Threshold for horizontal components of the wind vector: "u" and "v".
-    vertical_threshold : float
-        Threshold for the vertical component of the wind vector: "w".
-    temperature_threshold : float
-        Threshold for sonic temperature "T_s".
+    array : np.ndarray
+        A NumPy array of numerical values to be cleaned.
+    threshold : float
+        Absolute threshold. All values with absolute magnitude greater than this will be set to NaN.
 
     Returns
     -------
-    - pd.DataFrame
-        The cleaned DataFrame with outliers replaced by NaN.
+    array_clean : np.ndarray
+        A copy of the input array with values exceeding the threshold replaced by NaN.
+    count_beyond : int
+        The number of elements that were beyond the threshold and replaced.
 
-    Notes
-    -----
-    The distinction of thresholds into horizontal and vertical is based on the fact that
-    horizontal motions are usually more intense than vertical motions by two or more
-    orders of magnitude.
     """
-    data_clean = data.copy()
+    array_clean = array.copy()
+    where_beyond = np.abs(array_clean) > threshold
+    count_beyond = np.count_nonzero(where_beyond)
+    array_clean[where_beyond] = np.nan
 
-    for col in ['u', 'v']:
-        data_clean.loc[data_clean[col].abs() > horizontal_threshold, col] = np.nan
-
-    data_clean.loc[data_clean['w'].abs() > vertical_threshold, 'w'] = np.nan
-
-    data_clean.loc[data_clean['T_s'].abs() > temperature_threshold, 'T_s'] = np.nan
-
-    return data_clean
+    return array_clean, count_beyond
 
 ##### DESPIKING SECTION #####
 # definizione input: finestra in min per calcolo mobile, numero di valori consecutivi fuori soglia, costanti da cui partire:
