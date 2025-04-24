@@ -10,6 +10,9 @@ from unittest.mock import MagicMock
 import pre_processing
 import core
 
+# setting seed for the generation of random sequences in the script
+np.random.seed(42)
+
 
 ##### testing pre_processing.test_fill_missing_regular_case() #####
 
@@ -193,6 +196,39 @@ def test_despiking_removes_spikes():
     for idx in spike_indices:
         assert abs(despiked_array[idx]) < 10, f"Spike at index {idx} was not removed: value {despiked_array[idx]}"
 
+def test_despiking_too_long_spikes():
+
+    # tests if doesn't remove spikes that are longer than the parameter `max_consecutive_spikes`
+    size =1*60*60*1 # 1 Hz signal, duration: 1h => 3600 points
+    # unique long spike
+    spike_indices = [900, 901, 902]  # idices of the spikes
+    spike_value = 20  # Value possibly greater than the bounds: 1*3+1=5 (see after)
+    array = generate_data_with_spikes(size,
+                                      spike_indices,
+                                      spike_value)
+    c = 3.0
+    window_length = 5*60+1 # (5min window length + 1 to obtain odd number of points)
+    max_iterations = 10
+    max_consecutive_spikes_1 = 3
+    despiked_array_1 = pre_processing.despiking_VM97(array,
+                                    c=c,
+                                    window_length=window_length,
+                                    max_consecutive_spikes=max_consecutive_spikes_1,
+                                    max_iterations=max_iterations,
+                                    logger=None)
+    for idx in spike_indices:
+        assert abs(despiked_array_1[idx]) < 10, f"Spike at index {idx} was not removed: value {despiked_array_1[idx]}"
+
+    max_consecutive_spikes_2 = 2
+    despiked_array_2 = pre_processing.despiking_VM97(array,
+                                    c=c,
+                                    window_length=window_length,
+                                    max_consecutive_spikes=max_consecutive_spikes_2,
+                                    max_iterations=max_iterations,
+                                    logger=None)
+    for idx in spike_indices:
+        assert despiked_array_2[idx]==array[idx], f"Spike at index {idx} was removed even though it was longer than the 'max_consecutive_spikes' parameter "
+
 
 def test_despiking_preserves_normal_values():
     # tests that the function doesn't remove non-spike values, 
@@ -234,7 +270,7 @@ def test_despiking_stops_on_max_iterations(monkeypatch):
     mock_logger = MagicMock()
     max_iter = 3
 
-    temp_array = pre_processing.despiking_VM97(
+    _ = pre_processing.despiking_VM97(
         array_to_despike=input_array,
         c=2.0,
         window_length=5,
