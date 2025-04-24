@@ -164,7 +164,7 @@ def despiking_VM97(array_to_despike: np.ndarray,
                    window_length: int,
                    max_consecutive_spikes: int,
                    max_iterations: int,
-                   logger : Optional[logging.Logger]) -> np.ndarray:
+                   logger : Optional[logging.Logger] = None) -> np.ndarray:
     """
     Applies the despiking algorithm based on Vickers and Mahrt (1997) to remove spikes from a time series.
 
@@ -211,7 +211,8 @@ def despiking_VM97(array_to_despike: np.ndarray,
     count_spike = 1  # value > 0 to enter the cycle
 
     while count_spike != 0 and iteration <= max_iterations:
-        running_mean, running_std = core.running_stats(array_despiked, window_length)
+        running_mean, running_std = core.running_stats(array_despiked, 
+                                                       window_length)
 
         upper_bound = running_mean + current_c * running_std
         lower_bound = running_mean - current_c * running_std
@@ -224,7 +225,7 @@ def despiking_VM97(array_to_despike: np.ndarray,
         
         if logger: logger.info(
             f"""
-            Iteration: {iteration}, identified spikes: {count_spike}
+            Iteration: {iteration}, identified and removed spikes: {count_spike}
             """)
 
         current_c += c_increment  # increase the distance between the upper and lower bound
@@ -233,12 +234,54 @@ def despiking_VM97(array_to_despike: np.ndarray,
     return array_despiked
 
 
-# def despiking_ROBUST(data : pd.DataFrame) -> pd.DataFrame:
+def despiking_robust(array_to_despike: np.ndarray,
+                     c: float,
+                     window_length: int) -> np.ndarray:
+    """
+    Applies a non-iterative despiking algorithm using robust statistics to remove spikes from a time series.
 
-#     data_despiked=data
+    This method detects spikes by comparing each value in the input array against a local running median 
+    and a robust estimate of the local variability, computed over a moving window. A point is classified 
+    as a spike if it lies outside a dynamic threshold defined by `c` times the robust standard deviation 
+    added to and subtracted from the running median. The robust standard deviation is defined as half the
+    inter-percentile range between the 84th and 16th percentiles within the moving window:
+    
+    robust_std = (P84 - P16) / 2
 
+    Detected spikes are replaced with the corresponding value of the running median. 
+    This procedure is applied in a single pass and does not perform iterative refinement.
 
-#     return data_despiked
+    Parameters
+    ----------
+    array_to_despike : np.ndarray
+        The input 1D array containing the signal to be despiked.
+    c : float
+        Threshold multiplier for the robust standard deviation used to detect spikes.
+    window_length : int
+        Length of the moving window used to compute the running median and robust statistics.
+
+    Returns
+    -------
+    np.ndarray
+        The despiked version of the input array, with spikes replaced by the running median.
+    int
+        The total number of spikes detected and replaced.
+    """
+    array_despiked = array_to_despike.copy()
+
+    running_median, running_std_robust = core.running_stats_robust(array_despiked, 
+                                                                   window_length)
+    delta = np.maximum(c * running_std_robust, 0.5)
+    upper_bound = running_median + delta
+    lower_bound = running_median - delta
+
+    beyond_bounds_mask = (array_despiked > upper_bound) | (array_despiked < lower_bound)
+    
+    count_spike = np.sum(beyond_bounds_mask)
+
+    array_despiked[beyond_bounds_mask] = running_median[beyond_bounds_mask] # replaces values with the running median where beyond computed bounds
+
+    return array_despiked, count_spike
 
 
 # def interp_nan(df, variable_list, test_mode, count_log, file_path, log_file, test_file):

@@ -12,7 +12,7 @@ vertical_threshold = 5
 temperature_threshold = 50
 
 [despiking]
-# despiking mode, two options: VM97 to execute (Vickers and Mahrt, 1997) procedure or ROBUST, see documentation.
+# despiking mode, two options: "VM97" to execute "Vickers and Mahrt, 1997" procedure or "robust", see documentation.
 despiking_mode = VM97
 # legth in [min] of the moving window to perform the despiking procedure
 window_length_despiking = 5
@@ -20,7 +20,9 @@ window_length_despiking = 5
 max_length_spike = 3
 # iteration at which to stop the process
 max_iterations = 3
-# starting constants for the definition of the upper and lower bounds (for the VM97 mode only)
+# starting constants for the definition of the upper and lower bounds (for the "VM97" method only)
 c_H = 3.5
 c_V = 5
 c_T = 3.5
+# constant for the definition of the upper and lower bounds (for the "robust" method only)
+c_robust = 0.5

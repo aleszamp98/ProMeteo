@@ -275,3 +275,63 @@ def test_logger_usage(caplog):
     
     # Verifica che il logger abbia registrato informazioni sull'iterazione
     assert "Iteration:" in caplog.text, "Logger did not record any string 'iteration'"
+
+##### testing pre_processing.despiking_robust() #####
+
+def generate_data_with_spikes_despiking_robust(size: int,
+                              spike_indices: list,
+                              spike_value: float) -> np.ndarray:
+    data = np.random.uniform(0, 100, size=size) 
+    # an array for which the median and the percentiles are easy to compute:
+    # median=50, p16=16, p84=84
+    for idx in spike_indices:
+        data[idx] = spike_value
+    return data
+
+def test_no_spikes_robust():
+    signal = np.ones(100)
+    result, _ = pre_processing.despiking_robust(signal,
+                                             c=2.0,
+                                             window_length=5)
+    np.testing.assert_array_equal(result, signal)
+
+def test_despiking_removes_spikes_robust():
+    size = 1 * 60 * 60 * 1  # 1 Hz signal, duration: 1h => 3600 points
+    spike_indices = [900, 1800, 2700]  # spikes indices 15 min, 30 min, 45 min)
+    spike_value = 200  # has to be greater than the [mean + c*(p84-p16)/2] = 50 + 3*[(84-16)/2] = 152
+    array = generate_data_with_spikes_despiking_robust(size,
+                                                       spike_indices,
+                                                       spike_value)
+    
+    c = 3  # Parametro c per la funzione
+    window_length = 5 * 60 + 1
+    
+    despiked_array, count_spike = pre_processing.despiking_robust(array,
+                                                                  c=c,
+                                                                  window_length=window_length)
+    
+    # compute the running median
+    running_median, _ = core.running_stats_robust(array,
+                                                  window_length)
+
+    for idx in spike_indices: # verifies if the spikes were removed: sobstituted with 
+        assert despiked_array[idx] == running_median[idx], f"Spike at index {idx} was not removed: value {despiked_array[idx]}"
+    
+    # verifies if the number of values modified is correct
+    assert count_spike == len(spike_indices), f"Expected {len(spike_indices)} spikes, but got {count_spike}"
+
+
+def test_despiking_preserves_normal_values_robust():
+    size = 1 * 60 * 60 * 1  # 1h=3600 points
+    array = np.random.normal(loc=1, scale=1, size=size)  # without spikes
+    
+    c = 5.0 
+    window_length = 5
+    
+    despiked_array, _ = pre_processing.despiking_robust(array,
+                                                                  c=c,
+                                                                  window_length=window_length)
+    
+    np.testing.assert_array_equal(array,
+                                  despiked_array,
+                                  err_msg="Non-spike values incorrectly modified.")

@@ -49,6 +49,7 @@ def load_config(path : str) -> dict:
         c_H = config.get('despiking', 'c_H')
         c_V = config.get('despiking', 'c_V')
         c_T = config.get('despiking', 'c_T')
+        c_robust = config.get('despiking', 'c_robust')
 
     except configparser.NoSectionError as e:
         raise configparser.NoSectionError(e.section) from e
@@ -73,7 +74,7 @@ def load_config(path : str) -> dict:
         ) from e
     
     # control over despiking_mode
-    allowed_modes = ['VM97', 'ROBUST']
+    allowed_modes = ['VM97', 'robust']
     if despiking_mode not in allowed_modes:
         raise ValueError(f"Invalid value for 'despiking_mode': '{despiking_mode}'. "
                          f"Allowed values are: {allowed_modes}")
@@ -92,10 +93,11 @@ def load_config(path : str) -> dict:
         c_H = float(c_H)
         c_V = float(c_V)
         c_T = float(c_T)
+        c_robust = float(c_robust)
     except ValueError as e:
         raise ValueError(
-            "c_H, c_V and c_T must be numbers.\n"
-            f"Got: c_H='{c_H}', c_V='{c_V}', c_T='{c_T}'"
+            "c_H, c_V, c_T and c_robust must be numbers.\n"
+            f"Got: c_H='{c_H}', c_V='{c_V}', c_T='{c_T}', c_robust='{c_robust}'"
         ) from e
 
     params = {
@@ -112,6 +114,7 @@ def load_config(path : str) -> dict:
         'c_H' : c_H,
         'c_V' : c_V,
         'c_T' : c_T,
+        'c_robust' :c_robust,
     }
 
 

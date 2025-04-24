@@ -48,9 +48,10 @@ max_iterations = params['max_iterations']
 c_H = params['c_H']
 c_V = params['c_V']
 c_T = params['c_T']
+c_robust = params['c_robust']
 
 
-# data import: it has to be a .csv file containing 4 columns: TIMESTAMP, u,v,w,T_s => data
+# data import: it has to be a .csv file containing 4 columns: TIMESTAMP, u,v,w,T_s => rawdata
 rawdata=core.import_data(rawdata_path)
 logger.info(f"""
             Selected sampling frequency: {sampling_freq}
@@ -80,7 +81,7 @@ for col, threshold in zip(col_list, threshold_list):
     data_cleaned[col], count_beyond = pre_processing.remove_beyond_threshold(array_to_clean,
                                                                              threshold)
     logger.info(f"""
-            {count_beyond} points beyond {threshold} removed from '{col}' time series
+            {count_beyond} points beyond {threshold} replaced with NaNs from '{col}' time series
             """)
     del array_to_clean, count_beyond
 del data  # cleaning environment
@@ -120,23 +121,36 @@ if despiking_mode == "VM97":
                                                            max_length_spike,
                                                            max_iterations,
                                                            logger)
-        del array_to_despike
+        # comparison between non-despiked and despiked time series
+        replaced = np.sum(array_to_despike != data_despiked[col].to_numpy())
+        logger.info(f"""
+            Number of modified values: {replaced} 
+            """)
+        del array_to_despike, replaced
 
 elif despiking_mode == "robust":
     logger.info(f"""
             - Mode: {despiking_mode}
             - Moving window length: {window_length_despiking} min => {window_length_despiking_points} points
+            - Selected constant: {c_robust}
                 """)
-    for col in ['u', 'v', 'w', 'T_s']:
-        array_to_despike = data[col].to_numpy()
-        data_despiked[col] = pre_processing.despiking_ROBUST(array_to_despike,
-                                                             window_length_despiking_points)
-
-# comparison between non-despiked and despiked time series
-
-
+    for col in col_list:
+        logger.info(f"""
+            Despiking '{col}' time series
+                    """)
+        array_to_despike = data_cleaned[col].to_numpy()
+        data_despiked[col], count_spike = pre_processing.despiking_robust(array_to_despike,
+                                                                          c_robust,
+                                                                          window_length_despiking_points)
+        # comparison between non-despiked and despiked time series
+        logger.info(f"""
+            Number of modified values: {count_spike} 
+            """) 
+        del array_to_despike, count_spike
+        
 del data_cleaned # cleaning environment
 
+# Nan interpolation
 
 
 # salvataggio intermedio
