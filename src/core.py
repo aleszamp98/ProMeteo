@@ -253,3 +253,75 @@ def running_stats(array: np.ndarray,
         running_std[i] = np.nanstd(window)
 
     return running_mean, running_std
+
+def running_stats_robust(array: np.ndarray, 
+                  window_length: int
+                  ) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Compute the running (moving) median and robust standard deviation of a 1D array using a sliding window.
+
+    This function uses a centered sliding window of fixed length to calculate
+    the median and a robust estimate of the standard deviation at each point in the input array.
+    The robust standard deviation is computed as half the difference between the 84th and 16th percentiles.
+    The array is padded at the edges to allow computation at the boundaries.
+
+    Parameters
+    ----------
+    array : np.ndarray
+        Input 1D array of numerical values.
+    window_length : int
+        Number of points within the sliding window. Must be a positive odd integer less than or equal to the array length.
+
+    Returns
+    -------
+    running_median : np.ndarray
+        Array of the same length as the input, containing the running median.
+    running_std_robust : np.ndarray
+        Array of the same length as the input, containing the robust running standard deviation 
+        computed as (84th percentile - 16th percentile) / 2.
+
+    Raises
+    ------
+    ValueError
+        If `window_length` is not a positive integer.
+        If `window_length` is greater than the length of the input array.
+
+    Warns
+    -----
+    UserWarning
+        If `window_length` is even, a warning is issued that using an even-length window may result in asymmetric behavior.
+
+    Notes
+    -----
+    - The function pads the input array using constant values equal to the edge values of the array.
+    - If the input contains NaNs, they are ignored in the percentile and median computations
+      using `np.nanpercentile` and `np.nanmedian`.
+    """
+    if not isinstance(window_length, int) or window_length <= 0:
+        raise ValueError("window_length must be a positive integer.")
+
+    if window_length > len(array):
+        raise ValueError("window_length must not be greater than the length of the array.")
+
+    if window_length % 2 == 0:
+        warnings.warn(
+            "window_length is even; using an even-length window may result in asymmetric behavior.",
+            UserWarning)
+        
+    N = len(array)
+    half_window = window_length // 2
+
+    padded_array = np.pad(array, (half_window, half_window), mode='edge')
+
+    running_median = np.full(N, np.nan)
+    running_std_robust = np.full(N, np.nan)
+
+    for i in range(N):
+        window = padded_array[i:i + window_length]
+        
+        running_median[i] = np.nanmedian(window)
+        p84 = np.nanpercentile(window, 84)
+        p16 = np.nanpercentile(window, 16)
+        running_std_robust[i] = 0.5 * (p84 - p16)
+
+    return running_median, running_std_robust

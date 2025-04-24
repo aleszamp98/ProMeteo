@@ -179,3 +179,78 @@ def test_running_stats_invalid_window():
 
     with pytest.raises(ValueError): # window is longer than the array
         core.running_stats(array, window_length=6)
+
+##### testing core.running_stats_robust() #####
+
+def test_running_stats_robust_odd_window():
+    array = np.array([1, 2, 3, 4, 5])
+    window_length = 3
+    median, std_robust = core.running_stats_robust(array, window_length)
+
+    arrays = [
+        np.array([1, 1, 2]),
+        np.array([1, 2, 3]),
+        np.array([2, 3, 4]),
+        np.array([3, 4, 5]),
+        np.array([4, 5, 5])
+    ]
+
+    percentile_84 = np.full(5, np.nan)
+    percentile_16 = np.full(5, np.nan)
+    median = np.full(5, np.nan)
+    for i, array in enumerate(arrays):
+        median[i] = np.median(array)
+        percentile_84[i] = np.percentile(array, 84)
+        percentile_16[i] = np.percentile(array, 16)
+
+    expected_median = median
+    expected_std_robust = 0.5*(percentile_84-percentile_16)
+
+    assert_almost_equal(median, expected_median, decimal=3)
+    assert_almost_equal(std_robust, expected_std_robust, decimal=3)
+
+def test_running_stats_robust_even_window():
+    array = np.array([1, 2, 3, 4, 5])
+    window_length = 4
+
+    with pytest.warns(UserWarning, match="window_length is even"):
+        core.running_stats_robust(array, window_length)
+
+def test_running_stats_robust_with_nans():
+    array = np.array([1, 2, np.nan, 4, 5])
+    window_length = 3
+    median, std_robust = core.running_stats_robust(array, window_length)
+
+    arrays = [
+        np.array([1, 1, 2]),
+        np.array([1, 2, np.nan]),
+        np.array([2, np.nan, 4]),
+        np.array([np.nan, 4, 5]),
+        np.array([4, 5, 5])
+    ]
+
+    percentile_84 = np.full(5, np.nan)
+    percentile_16 = np.full(5, np.nan)
+    median = np.full(5, np.nan)
+    for i, array in enumerate(arrays):
+        median[i] = np.nanmedian(array)
+        percentile_84[i] = np.nanpercentile(array, 84)
+        percentile_16[i] = np.nanpercentile(array, 16)
+
+    expected_median = median
+    expected_std_robust = 0.5*(percentile_84-percentile_16)
+
+    assert_almost_equal(median, expected_median, decimal=3)
+    assert_almost_equal(std_robust, expected_std_robust, decimal=3)
+
+def test_running_stats_robust_invalid_window():
+    array = np.array([1, 2, 3, 4, 5])
+
+    with pytest.raises(ValueError):
+        core.running_stats_robust(array, window_length=0)
+
+    with pytest.raises(ValueError):
+        core.running_stats_robust(array, window_length=-1)
+
+    with pytest.raises(ValueError):
+        core.running_stats_robust(array, window_length=6)
