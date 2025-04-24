@@ -78,39 +78,39 @@ data_cleaned = pd.DataFrame(index=data.index, columns=data.columns)
 for col, threshold in zip(col_list, threshold_list):
     array_to_clean = data[col].to_numpy()
     data_cleaned[col], count_beyond = pre_processing.remove_beyond_threshold(array_to_clean,
-                                                               threshold)
+                                                                             threshold)
     logger.info(f"""
             {count_beyond} points beyond {threshold} removed from '{col}' time series
             """)
-    
-del data
+    del array_to_clean, count_beyond
+del data  # cleaning environment
 
 # despiking
 logger.info(f"""
-            Running despiking.
+            Despiking
             """)
 
 window_length_despiking_points = core.min_to_points(sampling_freq, 
-                                          window_length_despiking)
+                                                    window_length_despiking)
 if window_length_despiking_points % 2 == 0:
     window_length_despiking_points += 1
 data_despiked = pd.DataFrame(index=data_cleaned.index, columns=data_cleaned.columns)
 
 if despiking_mode == "VM97":
     logger.info(f"""
-                - Mode: {despiking_mode}
-                - Moving window length: {window_length_despiking} min => {window_length_despiking_points} points
-                - Maximum number of consecutive values to be considered spike: {max_length_spike}
-                - Maximum number of iterations to perform: {max_iterations}
-                - Starting values of c:
-                    - For the horizontal components of the wind: {c_H}
-                    - For the vertical component: {c_V}
-                    - For the sonic temperature: {c_T}
+            - Mode: {despiking_mode}
+            - Moving window length: {window_length_despiking} min => {window_length_despiking_points} points
+            - Maximum number of consecutive values to be considered spike: {max_length_spike}
+            - Maximum number of iterations to perform: {max_iterations}
+            - Starting values of c:
+                - For the horizontal components of the wind: {c_H}
+                - For the vertical component: {c_V}
+                - For the sonic temperature: {c_T}
                 """)
     c_list = [c_H, c_H, c_V, c_T] # starting constants
     for col, c in zip(col_list, c_list):
         logger.info(f"""
-                    Despiking variable {col}
+            Despiking '{col}' time series
                     """)
         array_to_despike = data_cleaned[col].to_numpy()
 
@@ -119,12 +119,13 @@ if despiking_mode == "VM97":
                                                            window_length_despiking_points,
                                                            max_length_spike,
                                                            max_iterations,
-                                                           logger
-                                                           )
+                                                           logger)
+        del array_to_despike
+
 elif despiking_mode == "robust":
     logger.info(f"""
-                - Mode: {despiking_mode}
-                - Moving window length: {window_length_despiking} min => {window_length_despiking_points} points
+            - Mode: {despiking_mode}
+            - Moving window length: {window_length_despiking} min => {window_length_despiking_points} points
                 """)
     for col in ['u', 'v', 'w', 'T_s']:
         array_to_despike = data[col].to_numpy()
@@ -132,7 +133,6 @@ elif despiking_mode == "robust":
                                                              window_length_despiking_points)
 
 # comparison between non-despiked and despiked time series
-
 
 
 del data_cleaned # cleaning environment

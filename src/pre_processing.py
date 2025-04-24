@@ -213,8 +213,6 @@ def despiking_VM97(array_to_despike: np.ndarray,
     while count_spike != 0 and iteration <= max_iterations:
         running_mean, running_std = core.running_stats(array_despiked, window_length)
 
-        if logger: logger.info(f"Iteration: {iteration}")
-
         upper_bound = running_mean + current_c * running_std
         lower_bound = running_mean - current_c * running_std
 
@@ -224,7 +222,10 @@ def despiking_VM97(array_to_despike: np.ndarray,
                                                              beyond_bounds_mask,
                                                              max_consecutive_spikes)
         
-        if logger: logger.info(f"Identified spikes: {count_spike}")
+        if logger: logger.info(
+            f"""
+            Iteration: {iteration}, identified spikes: {count_spike}
+            """)
 
         current_c += c_increment  # increase the distance between the upper and lower bound
         iteration += 1
