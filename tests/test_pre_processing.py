@@ -256,13 +256,13 @@ def test_despiking_stops_on_max_iterations(monkeypatch):
     input_array = np.array([1.0]*10 + [100.0] + [1.0]*10)
 
     # Mock delle funzioni esterne
-    def mock_running_stats(arr, window_length):
-        mean = np.ones_like(arr)  # media costante
-        std = np.ones_like(arr)   # deviazione standard costante
+    def mock_running_stats(array, window_length):
+        mean = np.ones_like(array)  # media costante
+        std = np.ones_like(array)   # deviazione standard costante
         return mean, std
 
-    def mock_identify_interp_spikes(arr, mask, max_consecutive_spikes):
-        return arr, 1  # simula spike costanti, mai 0
+    def mock_identify_interp_spikes(array, mask, max_consecutive_spikes):
+        return array, 1  # simula spike costanti, mai 0
 
     monkeypatch.setattr(core, "running_stats", mock_running_stats)
     monkeypatch.setattr("pre_processing.identify_interp_spikes", mock_identify_interp_spikes)
@@ -371,3 +371,39 @@ def test_despiking_preserves_normal_values_robust():
     np.testing.assert_array_equal(array,
                                   despiked_array,
                                   err_msg="Non-spike values incorrectly modified.")
+    
+##### testing pre_processing.interp_nan() #####
+
+def test_no_nans():
+    array = np.array([1.0, 2.0, 3.0])
+    result, count = pre_processing.interp_nan(array)
+    np.testing.assert_array_equal(result, array)
+    assert count == 0
+
+def test_single_nan():
+    array = np.array([1.0, np.nan, 3.0])
+    expected = np.array([1.0, 2.0, 3.0])
+    result, count = pre_processing.interp_nan(array)
+    np.testing.assert_allclose(result, expected)
+    assert count == 1
+
+def test_multiple_nans():
+    array = np.array([1.0, np.nan, np.nan, 4.0])
+    expected = np.array([1.0, 2.0, 3.0, 4.0])
+    result, count = pre_processing.interp_nan(array)
+    np.testing.assert_allclose(result, expected)
+    assert count == 2
+
+def test_nan_at_edges():
+    array = np.array([np.nan, 1.0, 2.0, np.nan])
+    expected = np.array([np.nan, 1.0, 2.0, np.nan])
+    result, count = pre_processing.interp_nan(array)
+    np.testing.assert_array_equal(result, expected)
+    assert count == 0
+
+def test_all_nans():
+    array = np.array([np.nan, np.nan])
+    expected = np.array([np.nan, np.nan])
+    result, count = pre_processing.interp_nan(array)
+    np.testing.assert_array_equal(result, expected)
+    assert count == 0

@@ -284,46 +284,56 @@ def despiking_robust(array_to_despike: np.ndarray,
     return array_despiked, count_spike
 
 
-# def interp_nan(df, variable_list, test_mode, count_log, file_path, log_file, test_file):
-#     # This function takes a df as input and returns a dataframe in the same order.
-#     # Each column (except for the time column) is processed: if nans are detected, they are filled with interpolated values computed using
-#     # linear interpolation of the first neighbors.
+import numpy as np
 
-#     time_array=df.loc[:,'Time']
-#     N=len(df)
-#     for variable in variable_list:
+def interp_nan(array: np.ndarray) -> Tuple[np.ndarray, int]:
+    """
+    Interpolates NaN values in the input array using linear interpolation.
+    NaNs are replaced with values computed by the `linear_interp` function,
+    using the closest non-NaN values to the left and right as reference points.
+    If NaNs are at the edges of the array (i.e., without valid neighbors on both sides),
+    they are left unchanged.
 
-#         array=df.loc[:,variable].to_numpy() #array su cui lavoro, proviene dal df di input
-#         where_nan=np.isnan(array)
-#         nan_initial=np.sum(where_nan)
-#         nan_filled_count=0
-#         dum=False
+    Parameters
+    ----------
+    array : np.ndarray
+        The input array containing NaN values to interpolate.
 
-#         for i in range(N):
-#             if where_nan[i]:
-#                 if dum==False:
-#                     spike_index=[i] #mi salvo le posizioni delle spike, la lunghezza di questo array definisce quante spike si susseguono
-#                     dum=True
-#                 else:
-#                     spike_index.append(i)
-#             else:
-#                 if dum==True:
-#                     #interpolazione lineare
-#                     if (spike_index[0]==0) or (spike_index[-1]==(N-1)): #lascia invariato perchè non puoi interpolare
-#                         dum=False
-#                         del spike_index
-#                     else:
-#                         M=len(spike_index)
-#                         y_0=array[spike_index[0]-1] #valore primo vicino a sinistra
-#                         y_1=array[spike_index[-1]+1] #valore primo vicino a destra
-#                         diff=y_1-y_0
-#                         x=np.arange(1, M+1) #(1,2,3)
-#                         array[spike_index]=y_0+x*diff/(M+1)                  
-#                         dum=False #azzero il flag del contatore
-#                         nan_filled_count=nan_filled_count+M
-#                         del spike_index
-#         df[variable]=array
-#         del array, nan_filled_count, nan_initial, nan_final
+    Returns
+    -------
+    np.ndarray
+        A copy of the input array with NaN values replaced by interpolated values,
+        where possible.
+    int
+        Number of NaN values that were successfully interpolated.
+    """
+    array_interp = array.copy()
+    isnan = np.isnan(array_interp)
+    count_interp = 0
 
-#     return df
+    i = 0
+    while i < len(array_interp):
+        if isnan[i]:
+            start = i
+            while i < len(array_interp) and isnan[i]:
+                i += 1
+            end = i
 
+            if start == 0 or end == len(array_interp):
+                continue  # cannot interpolate at the edges
+
+            left_value = array_interp[start - 1]
+            right_value = array_interp[end]
+            length = end - start
+
+            interpolated = linear_interp(left_value,
+                                         right_value,
+                                         length)
+            
+            array_interp[start:end] = interpolated
+
+            count_interp += length
+        else:
+            i += 1
+
+    return array_interp, count_interp

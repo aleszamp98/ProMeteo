@@ -59,6 +59,12 @@ logger.info(f"""
             """)
 col_list=['u', 'v', 'w', 'T_s'] #Time as index
 
+###################################################################################################
+###################################################################################################
+######################################### PRE-PROCESSING ##########################################
+###################################################################################################
+###################################################################################################
+
 # filling missing timestamps known sampling frequency
 data=pre_processing.fill_missing_timestamps(rawdata, sampling_freq)
 logger.info(f"""
@@ -95,6 +101,7 @@ window_length_despiking_points = core.min_to_points(sampling_freq,
                                                     window_length_despiking)
 if window_length_despiking_points % 2 == 0:
     window_length_despiking_points += 1
+
 data_despiked = pd.DataFrame(index=data_cleaned.index, columns=data_cleaned.columns)
 
 if despiking_mode == "VM97":
@@ -152,8 +159,32 @@ del data_cleaned # cleaning environment
 
 # Nan interpolation
 
+data_interp = pd.DataFrame(index=data_despiked.index, columns=data_despiked.columns)
 
-# salvataggio intermedio
+for col in col_list:
+    array_to_interp = data_despiked[col].to_numpy()
+    data_interp[col], count_interp = pre_processing.interp_nan(array_to_interp)
+    count_remaining_nans = np.sum(np.isnan(data_interp[col].to_numpy()))
+    # comparison between before and after the interpolation procedure
+    logger.info(f"""
+        NaNs interpolation of '{col}' time series:
+        - Number of interpolated NaNs: {count_interp}
+        - Number of remaining NaNs: {count_remaining_nans}
+        """) 
+    del array_to_interp, count_interp, count_remaining_nans
+
+del data_despiked
+
+# saving preprocessed data
+data_interp.to_csv(dir_out+"despiked_data.csv",
+                   na_rep='NaN',
+                   float_format='%.7e')
+
+###################################################################################################
+###################################################################################################
+###################################################################################################
+###################################################################################################
+###################################################################################################
 
 # computation of wind direction
 
