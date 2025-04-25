@@ -49,7 +49,7 @@ c_H = params['c_H']
 c_V = params['c_V']
 c_T = params['c_T']
 c_robust = params['c_robust']
-
+window_length_averaging = params['window_length_averaging']
 
 # data import: it has to be a .csv file containing 4 columns: TIMESTAMP, u,v,w,T_s => rawdata
 rawdata=core.import_data(rawdata_path)
@@ -176,24 +176,61 @@ for col in col_list:
 del data_despiked
 
 # saving preprocessed data
+data_interp.index.name = "Time"
 data_interp.to_csv(dir_out+"despiked_data.csv",
                    na_rep='NaN',
-                   float_format='%.7e')
+                   float_format='%.7e', 
+                   index=True)
 
 ###################################################################################################
 ###################################################################################################
 ###################################################################################################
 ###################################################################################################
 ###################################################################################################
+
+# compute the running mean of the horizontal wind components
+
+# mean_horizontal_wind = np.full( (2, len(data_interp)), np.nan) 
+# # array with 3 rows and as many columns as the last dataframe
+# # fixing a column is like choosing a specific time instant
+# # [0,:] = u component
+# # [1,:] = v component
+# # [2,:] = w component
+# for i, component in enumerate(['u','v','w']):
+#     mean_horizontal_wind[i,:] = core.running_stats(data_interp[component].to_numpy,
+#                                                    window_length_averaging)
+
+
+
+# componenti del vento medio servono 
+# sia per calcolare wind dir che per fare la rotazione nel sistema streamline
 
 # computation of wind direction
 
 # salvataggio intermedio con colonna wind_dir
 
+###################################################################################################
+###################################################################################################
+###################################################################################################
+###################################################################################################
+###################################################################################################
+
 # rotation to streamline coordinate system
 
 # salvataggio intermedio con colonna wind_dir
 
+###################################################################################################
+###################################################################################################
+###################################################################################################
+###################################################################################################
+###################################################################################################
+
 # reynolds decomposition => new dataframe containing mean(u), mean(v), mean(w), mean(T_s), mean(wind_dir), u', v', w', T_s', u'u', v'v', w'w', TKE, u'w', w'T'
+
+###################################################################################################
+###################################################################################################
+###################################################################################################
+###################################################################################################
+###################################################################################################
 
 # variables plotting

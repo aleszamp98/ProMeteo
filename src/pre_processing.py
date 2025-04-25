@@ -337,3 +337,21 @@ def interp_nan(array: np.ndarray) -> Tuple[np.ndarray, int]:
             i += 1
 
     return array_interp, count_interp
+
+# trasformazione da sistema intrinseco young a standard, dato bearing
+
+# trasformazione da sistema intrinseco CSAT3 a standard, dato bearing
+
+
+
+# calcolo wind dir da sistema meteo standard
+def wind_direction(u : np.ndarray,
+                   v : np.ndarray,
+                   bearing : float) -> np.ndarray:
+    #controlla che u e v abbiano stessa lunghezza
+    # bearing in gradi, controlla che sia tra 0 e 360
+
+    N=len(u)
+    wind_dir=np.full(N, 1.0)
+
+    return wind_dir

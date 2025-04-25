@@ -51,6 +51,8 @@ def load_config(path : str) -> dict:
         c_T = config.get('despiking', 'c_T')
         c_robust = config.get('despiking', 'c_robust')
 
+        window_length_averaging = config.get('averaging', 'window_length_averaging')
+
     except configparser.NoSectionError as e:
         raise configparser.NoSectionError(e.section) from e
     except configparser.NoOptionError as e:
@@ -81,12 +83,12 @@ def load_config(path : str) -> dict:
     
     # control over passed inputs for despiking procedure
     try:
-        window_length_despiking = int(window_length_despiking)
+        window_length_despiking = float(window_length_despiking)
         max_length_spike = int(max_length_spike)
         max_iterations = int(max_iterations)
     except ValueError as e:
         raise ValueError(
-            "window_length_despiking, max_length_spike and max_iterations must be integers.\n"
+            "window_length_despiking, max_length_spike and max_iterations must be numbers.\n"
             f"Got: window_length_despiking='{window_length_despiking}', max_length_spike='{max_length_spike}' and max_iterations='{max_iterations}'"
         ) from e
     try:
@@ -98,6 +100,15 @@ def load_config(path : str) -> dict:
         raise ValueError(
             "c_H, c_V, c_T and c_robust must be numbers.\n"
             f"Got: c_H='{c_H}', c_V='{c_V}', c_T='{c_T}', c_robust='{c_robust}'"
+        ) from e
+    
+    # control over passed inputs for averaging procedure
+    try:
+        window_length_averaging = float(window_length_averaging)
+    except ValueError as e:
+        raise ValueError(
+            "window_length_averaging must be a float-compatible input.\n"
+            f"Got: window_length_averaging='{window_length_averaging}' "
         ) from e
 
     params = {
@@ -114,7 +125,8 @@ def load_config(path : str) -> dict:
         'c_H' : c_H,
         'c_V' : c_V,
         'c_T' : c_T,
-        'c_robust' :c_robust,
+        'c_robust' : c_robust,
+        'window_length_averaging': window_length_averaging,
     }
 
 

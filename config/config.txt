@@ -26,3 +26,7 @@ c_V = 5
 c_T = 3.5
 # constant for the definition of the upper and lower bounds (for the "robust" method only)
 c_robust = 0.5
+
+[averaging]
+legth in [min] of the moving window to compute the mean horizontal wind components
+window_length_averaging = 5
