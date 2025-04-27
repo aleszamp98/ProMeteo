@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 import logging
-from typing import Tuple, Optional
+from typing import Tuple, Optional, Union
 # import src.core as core
 import core
 
@@ -419,22 +419,221 @@ def rotation_to_LEC_reference(wind : np.ndarray,
     
     return wind_rotated
 
-def rotation_to_streamline_reference(wind : np.ndarray, # model indipendent
-                                    wind_averaged : np.ndarray) -> np.ndarray:
-    # controllo sulla dimensione di wind e wind averaged
-    wind_rotated = np.full(wind.shape, np.nan)
+def rotation_to_streamline_reference(wind: np.ndarray,
+                                     wind_averaged: np.ndarray) -> np.ndarray:
+    """
+    Rotate wind velocity components into the streamline coordinate system,
+    following the method of Khaimal and Finnigan (1979).
+
+    Parameters
+    ----------
+    wind : np.ndarray
+        Instantaneous wind velocity components of shape (3, N),
+        where the first index represents (u, v, w).
+    wind_averaged : np.ndarray
+        Averaged (mean) wind velocity components of shape (3, N),
+        used to define the streamline reference frame at each instant.
+
+    Returns
+    -------
+    wind_rotated : np.ndarray
+        Wind velocity components rotated into the streamline coordinate system,
+        of shape (3, N).
+
+    Raises
+    ------
+    ValueError
+        If 'wind' or 'wind_averaged' do not have shape (3, N).
+        If 'wind' and 'wind_averaged' do not have the same number of columns (N).
+
+    Notes
+    -----
+    The streamline coordinate system aligns:
+    - x-axis with the mean horizontal wind direction,
+    - y-axis perpendicular to the x-axis horizontally,
+    - z-axis aligned with the mean vertical direction.
+    """
+    # Check input shapes
+    if wind.shape[0] != 3 or wind_averaged.shape[0] != 3:
+        raise ValueError("Both 'wind' and 'wind_averaged' must have shape (3, N)")
+    if wind.shape[1] != wind_averaged.shape[1]:
+        raise ValueError("'wind' and 'wind_averaged' must have the same number of columns (N)")
+
+    N = wind.shape[1]
+    u_averaged = wind_averaged[0, :]
+    v_averaged = wind_averaged[1, :]
+    w_averaged = wind_averaged[2, :]
+    
+    s = np.sqrt(u_averaged**2 + v_averaged**2)  # horizontal speed
+    theta = np.arctan2(v_averaged, u_averaged)  # azimuth angle
+    phi = np.arctan2(w_averaged, s)             # elevation angle
+
+    # Build rotation matrices
+    rot = np.zeros((3, 3, N))
+    rot[0, 0, :] = np.cos(phi) * np.cos(theta)
+    rot[0, 1, :] = np.cos(phi) * np.sin(theta)
+    rot[0, 2, :] = np.sin(phi)
+    rot[1, 0, :] = -np.sin(theta)
+    rot[1, 1, :] = np.cos(theta)
+    rot[1, 2, :] = 0.0
+    rot[2, 0, :] = -np.sin(phi) * np.cos(theta)
+    rot[2, 1, :] = -np.sin(phi) * np.sin(theta)
+    rot[2, 2, :] = np.cos(phi)
+
+    # Apply rotation
+    wind_rotated = np.einsum('ijk,jk->ik', rot, wind)
+
     return wind_rotated
 
-def wind_dir_LEC_reference(horizontal_wind : np.ndarray) -> np.ndarray:
-    # controllo sulla shape di horizontal wind
-    N = horizontal_wind.shape[1]
-    wind_direction = np.full(N, np.nan)
+def wind_dir_LEC_reference(u: Union[np.ndarray, list, float, int], 
+                           v: Union[np.ndarray, list, float, int]) -> np.ndarray:
+    """
+    Compute wind direction from u and v wind components in a Local Earth Coordinate (LEC) reference system, 
+    following the meteorological convention.
+
+    Wind direction is defined as:
+    - 0 degrees: wind coming from North
+    - 90 degrees: wind coming from East
+    - 180 degrees: wind coming from South
+    - 270 degrees: wind coming from West
+
+    Parameters
+    ----------
+    u : array_like or scalar
+        East-West wind component (positive towards East) in the LEC reference system.
+    v : array_like or scalar
+        North-South wind component (positive towards North) in the LEC reference system.
+
+    Returns
+    -------
+    wind_direction : ndarray
+        Wind direction in degrees, values between 0° and 360° (0 inclusive, 360 exclusive).
+
+    Raises
+    ------
+    ValueError
+        If `u` and `v` are arrays and their shapes do not match.
+    """
+    u = np.asarray(u)
+    v = np.asarray(v)
+    
+    if u.shape != v.shape:
+        raise ValueError(f"Shape mismatch: u.shape = {u.shape}, v.shape = {v.shape}")
+
+    wind_direction = (np.degrees(np.arctan2(u, v)) + 360) % 360
     return wind_direction
 
-def wind_dir_modeldependent_reference(wind : np.ndarray,
-                                      azimuth : float,
-                                      model : str) -> np.ndarray:
-    # controllo sulla shape di wind averaged, valore di azimuth e modelli possibili
-    N = wind.shape[1]
-    wind_direction = np.full(N, np.nan)
-    return wind_direction # model dependent computation
+
+def wind_dir_modeldependent_reference(u: Union[np.ndarray, list, float, int],
+                                       v: Union[np.ndarray, list, float, int],
+                                       azimuth: float,
+                                       model: str) -> np.ndarray:
+    """
+    Compute the wind direction based on the model of the anemometer and a custom azimuth.
+
+    Parameters
+    ----------
+    u : array-like
+        The u-component of the wind (east-west direction).
+    v : array-like
+        The v-component of the wind (north-south direction).
+    azimuth : float
+        The azimuth rotation in degrees to adjust the wind direction (e.g., instrument mounting offset).
+    model : str
+        The model of the anemometer, either "RM_YOUNG_81000" or "CAMPBELL_CSAT3".
+
+    Returns
+    -------
+    np.ndarray
+        The wind direction in degrees, with 0° corresponding to North, 90° to East, etc.
+
+    Raises
+    ------
+    ValueError
+        If the shapes of u and v do not match.
+        If an unknown model is specified.
+    """
+    
+    u = np.asarray(u)
+    v = np.asarray(v)
+
+    # Check for shape mismatch between u and v
+    if u.shape != v.shape:
+        raise ValueError(f"Shape mismatch: u.shape = {u.shape}, v.shape = {v.shape}")
+
+    model = model.upper()
+
+    # Compute wind direction based on the model's coordinate system
+    if model == "RM_YOUNG_81000":
+        wind_dir = np.degrees(np.arctan2(-v, u))  # Reverse the v-component for this model
+    elif model == "CAMPBELL_CSAT3":
+        wind_dir = np.degrees(np.arctan2(v, u))   # Use the original v-component for this model
+    else:
+        raise ValueError(f"Unknown model: {model}. Supported models are 'RM_YOUNG_81000' and 'CAMPBELL_CSAT3'.")
+
+    wind_dir = wind_dir % 360  # normalize the angle between [0, 360)
+
+    # azimuth offset to the wind direction
+    true_wind_dir = (wind_dir + azimuth) % 360
+
+    return true_wind_dir
+
+# def compute_wind_dir_young(u,v):
+#     wind_dir=np.degrees(np.arctan2(-v,u))
+#     # manage negative values
+#     where_neg=wind_dir<0
+#     wind_dir[where_neg]=wind_dir[where_neg]+360
+#     # rotate to have 0° when wind from North, 90° when wind from East
+#     true_wind_dir=wind_dir+90
+#     # manage values bigger than 360
+#     where_out=true_wind_dir>360
+#     true_wind_dir[where_out]=true_wind_dir[where_out]-360
+
+#     del where_neg
+#     del where_out
+#     return true_wind_dir
+
+# def compute_wind_dir_ES3csat(u,v):
+#     wind_dir=np.degrees(np.arctan2(-v,u))
+#     # manage negative values
+#     where_neg=wind_dir<0
+#     wind_dir[where_neg]=wind_dir[where_neg]+360
+#     # rotate to have 0° when wind from North, 90° when wind from East
+#     true_wind_dir=wind_dir+246
+#     # manage values bigger than 360
+#     where_out=true_wind_dir>360
+#     true_wind_dir[where_out]=true_wind_dir[where_out]-360
+
+#     del where_neg
+#     del where_out
+#     return true_wind_dir
+
+# def compute_wind_dir_ES5csat(u,v):
+#     wind_dir=np.degrees(np.arctan2(-v,u))
+#     # manage negative values
+#     where_neg=wind_dir<0
+#     wind_dir[where_neg]=wind_dir[where_neg]+360
+#     # no rotation needed
+#     true_wind_dir=wind_dir
+#     # manage values bigger than 360
+#     where_out=true_wind_dir>360
+#     true_wind_dir[where_out]=true_wind_dir[where_out]-360
+
+#     del where_neg
+#     del where_out
+#     return true_wind_dir
+
+# def compute_wind_dir_SBcsat(u,v):
+#     wind_dir=np.degrees(np.arctan2(-v,u))
+#     # manage negative values
+#     where_neg=wind_dir<0
+#     wind_dir[where_neg]=wind_dir[where_neg]+360
+#     # rotate to have 0° when wind from North, 90° when wind from East
+#     true_wind_dir=wind_dir+230
+#     # manage values bigger than 360
+#     where_out=true_wind_dir>360
+#     true_wind_dir[where_out]=true_wind_dir[where_out]-360
+
+#     del where_neg
+#     del where_out
+#     return true_wind_dir
