@@ -338,20 +338,97 @@ def interp_nan(array: np.ndarray) -> Tuple[np.ndarray, int]:
 
     return array_interp, count_interp
 
-# trasformazione da sistema intrinseco young a standard, dato bearing
 
-# trasformazione da sistema intrinseco CSAT3 a standard, dato bearing
+def rotation_to_LEC_reference(wind : np.ndarray,
+                              azimuth : float,
+                              model : str) -> np.ndarray: 
+    """
+    Rotate the wind vector from the anemometer reference system 
+    to the Local Earth Coordinate system (LEC), givent the orientation `azimuth`
+    of the anemometer head with respect to the North.
+
+    Parameters
+    ----------
+    wind : np.ndarray
+        A 3xN array (shape (3, N)), where each column is a wind vector at a different time instant.
+        The three rows correspond to the three velocity components.
+    azimuth : float
+        The azimuth angle in degrees measured clockwise from the North, describing the orientation
+        of the anemometer head with respect to the North-
+    model : str
+        The anemometer model used for the measurement. 
+        Only two models are supported:
+            - "RM_YOUNG_81000"
+            - "CAMPBELL_CSAT3"
+
+    Returns
+    -------
+    np.ndarray
+        A 3xN array (shape (3, N)) of wind vectors rotated into the LEC reference frame,
+        with the y-axis aligned to the geographic North.
+    
+    Raises
+    ------
+    ValueError
+        If the azimuth is outside the range [0, 360].
+    ValueError
+        If the anemometer model is not recognized (i.e., not "RM_YOUNG_81000" or "CAMPBELL_CSAT3").
+    
+    Notes
+    -----
+    The function applies two sequential rotations:
+    1. A model-dependent transformation that maintains the Cartesian reference frame while 
+    ensuring that the u and v wind components are positive when aligned with the x- and y-axes, respectively.
+    2. A rotation aligning the y-axis to the North, according to the specified azimuth.
+    """
+    
+    # ROTATION from the intrinsic reference system of the instrument
+    # to a standard reference frame with:
+    # u positive if concordant with x-axis
+    # v positive if concordant with y-axis
+    # with the y-axis oriented in the direction 
+    # defined by the azimuth angle with respect to North (positive clockwise)
+    # the rotation matrix depends on the anemometer model
+    
+    if not (0 <= azimuth <= 360):
+        raise ValueError( "azimuth is outside the range [0,360].")
+    
+    rot_model = np.zeros((3,3))
+    if model == "RM_YOUNG_81000":
+        rot_model[0,0] = -1
+        rot_model[1,1] = -1
+        rot_model[2,2] =  1
+    elif model == "CAMPBELL_CSAT3":
+        rot_model[0,1] =  1
+        rot_model[1,0] = -1
+        rot_model[2,2] =  1
+    else:
+        raise ValueError(f"Unknown model: {model}")
+
+    # ROTATION to LEC system with y-axis oriented to North
+    azimuth = np.deg2rad(azimuth) # degree to radians conversion
+    rot_azimuth = np.zeros((3,3))
+    rot_azimuth[0, 0] =  np.cos(azimuth) # input have to be angles in radians
+    rot_azimuth[0, 1] =  np.sin(azimuth)
+    rot_azimuth[1, 0] = -np.sin(azimuth)
+    rot_azimuth[1, 1] =  np.cos(azimuth)
+    rot_azimuth[2, 2] =  1
+
+    rot_total = np.matmul(rot_azimuth, rot_model)
+    wind_rotated = np.matmul(rot_total, wind)
+    
+    return wind_rotated
 
 
 
-# calcolo wind dir da sistema meteo standard
-def wind_direction(u : np.ndarray,
-                   v : np.ndarray,
-                   bearing : float) -> np.ndarray:
-    #controlla che u e v abbiano stessa lunghezza
-    # bearing in gradi, controlla che sia tra 0 e 360
+# # calcolo wind dir da sistema meteo standard
+# def wind_direction(u : np.ndarray,
+#                    v : np.ndarray,
+#                    bearing : float) -> np.ndarray:
+#     #controlla che u e v abbiano stessa lunghezza
+#     # bearing in gradi, controlla che sia tra 0 e 360
 
-    N=len(u)
-    wind_dir=np.full(N, 1.0)
+#     N=len(u)
+#     wind_dir=np.full(N, 1.0)
 
-    return wind_dir
+#     return wind_dir

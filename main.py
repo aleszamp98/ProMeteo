@@ -38,6 +38,7 @@ params = core.load_config(config_file_path)
 rawdata_path = params['rawdata_path']
 dir_out = params['dir_out']
 sampling_freq = params['sampling_freq']
+model = params['model']
 horizontal_threshold = params['horizontal_threshold']
 vertical_threshold = params['vertical_threshold']
 temperature_threshold = params['temperature_threshold']
@@ -50,12 +51,15 @@ c_V = params['c_V']
 c_T = params['c_T']
 c_robust = params['c_robust']
 window_length_averaging = params['window_length_averaging']
+reference_frame = params['reference_frame']
+azimuth = params['azimuth']
 
 # data import: it has to be a .csv file containing 4 columns: TIMESTAMP, u,v,w,T_s => rawdata
 rawdata=core.import_data(rawdata_path)
 logger.info(f"""
-            Selected sampling frequency: {sampling_freq}
             Raw Data imported from: {rawdata_path}
+            Anemometer model: {model}
+            Selected sampling frequency: {sampling_freq}
             """)
 col_list=['u', 'v', 'w', 'T_s'] #Time as index
 
@@ -177,37 +181,14 @@ del data_despiked
 
 # saving preprocessed data
 data_interp.index.name = "Time"
-data_interp.to_csv(dir_out+"despiked_data.csv",
+data_interp.to_csv(dir_out+"data_preprocessed.csv",
                    na_rep='NaN',
                    float_format='%.7e', 
                    index=True)
 
-###################################################################################################
-###################################################################################################
-###################################################################################################
-###################################################################################################
-###################################################################################################
-
-# compute the running mean of the horizontal wind components
-
-# mean_horizontal_wind = np.full( (2, len(data_interp)), np.nan) 
-# # array with 3 rows and as many columns as the last dataframe
-# # fixing a column is like choosing a specific time instant
-# # [0,:] = u component
-# # [1,:] = v component
-# # [2,:] = w component
-# for i, component in enumerate(['u','v','w']):
-#     mean_horizontal_wind[i,:] = core.running_stats(data_interp[component].to_numpy,
-#                                                    window_length_averaging)
-
-
-
-# componenti del vento medio servono 
-# sia per calcolare wind dir che per fare la rotazione nel sistema streamline
-
-# computation of wind direction
-
-# salvataggio intermedio con colonna wind_dir
+logger.info(f"""
+            Pre-processed data saved.
+            """)
 
 ###################################################################################################
 ###################################################################################################
@@ -215,9 +196,68 @@ data_interp.to_csv(dir_out+"despiked_data.csv",
 ###################################################################################################
 ###################################################################################################
 
-# rotation to streamline coordinate system
+# reference frame rotation & wind direction computation
 
-# salvataggio intermedio con colonna wind_dir
+window_length_averaging_points = core.min_to_points(sampling_freq, 
+                                                    window_length_averaging)
+if window_length_averaging_points % 2 == 0:
+    window_length_averaging_points += 1
+
+logger.info(f"""
+            Rotation to {reference_frame} reference frame
+            and Wind Direction computation.
+            - Moving window length: {window_length_averaging} min => {window_length_averaging_points} points
+            """)
+
+data_rotated = pd.DataFrame(index=data_interp.index, columns=data_interp.columns)
+wind = np.full((3,len(data_rotated)), np.nan)
+wind_averaged = np.full( (3, len(data_interp)), np.nan)
+
+if reference_frame == "LEC":
+    # ROTATION TO LEC (Local Earth Coordinate) System, given the type and azimuth of the instrument
+    wind_rotated = pre_processing.rotation_to_LEC_reference(wind,
+                                                  azimuth,
+                                                  model)
+
+    for i, component in enumerate(['u','v','w']):
+        wind_averaged[i,:] = core.running_stats(wind_rotated[i,:], # LEC wind components necessary in the wind_direction computation
+                                                window_length_averaging)
+    wind_direction = pre_processing.wind_dir_LEC_reference(wind_averaged[0:2,:]) # only horizontal components in LEC system needee
+    
+    # maintain in memory the wind_averaged array cause is necessary to the next step: reynolds decomposition
+    
+# rotazione in un riferimento streamline (indipendente da orientazione)
+# riparte da componenti sistema intrinseco => compie media (può essere interna)
+#  => esegue rotazione sulla base delle compoennti medie
+elif reference_frame == "streamline":
+    for i, component in enumerate(['u','v','w']):
+        wind_averaged[i,:] = core.running_stats(data_interp[component].to_numpy, # non rotated wind components necessary in the wind_direction computation
+                                                window_length_averaging)
+    wind_rotated = pre_processing.rotation_to_streamline_reference(wind, # model indipendent
+                                                                   wind_averaged)
+    wind_direction = pre_processing.wind_dir_modeldependent_reference(wind_averaged,
+                                                                      azimuth,
+                                                                      model) # model dependent computation
+    del wind_averaged # delete wind_averaged cause is in the old reference system, not useful to the next step: reynolds decomposition
+
+del data_interp
+
+# saving rotated data
+for i, component in enumerate(['u','v','w']):
+    data_rotated[component]= wind_rotated[i,:]
+data_rotated["T_s"] = data_interp["T_s"] # copy the T_s column unchanged
+data_rotated["wind_dir"] = wind_direction
+data_rotated.index.name = "Time"
+data_rotated.to_csv(dir_out+f"data_preprocessed_rotated_{reference_frame}.csv",
+                   na_rep='NaN',
+                   float_format='%.7e', 
+                   index=True)
+
+del wind, wind_direction
+
+logger.info(f"""
+            Rotated wind components saved.
+            """)
 
 ###################################################################################################
 ###################################################################################################
@@ -225,7 +265,26 @@ data_interp.to_csv(dir_out+"despiked_data.csv",
 ###################################################################################################
 ###################################################################################################
 
-# reynolds decomposition => new dataframe containing mean(u), mean(v), mean(w), mean(T_s), mean(wind_dir), u', v', w', T_s', u'u', v'v', w'w', TKE, u'w', w'T'
+# reynolds decomposition => 
+# new dataframe containing mean(u), mean(v), mean(w), mean(T_s), mean(wind_dir), 
+# (u', v', w', T_s')
+# u'u', v'v', w'w', TKE, u'w', w'T'
+
+# create dataframe for mean variables "data_first_order"
+# create dataframe for second order variables "data_second_order"
+
+# if reference_frame == "streamline":
+#     #compute wind averaged in the streamline reference
+#     wind_averaged = np.full( (3, len(data_interp)), np.nan)
+#     for i, component in enumerate(['u','v','w']):
+#         wind_averaged[i,:] = core.running_stats(wind_rotated[i,:],
+#                                                 window_length_averaging)
+# elif reference_frame == "LEC":
+#     # wind averaged already computed in the rotation step
+#     pass
+
+# stats computation...
+
 
 ###################################################################################################
 ###################################################################################################

@@ -5,6 +5,8 @@ rawdata_path = /home/zampa/projects/ProMeteo/data/test_data.csv
 dir_out = /home/zampa/projects/ProMeteo/data/
 # sampling frequency
 sampling_freq = 20
+# anemometer model: "RM_YOUNG_81000", "CAMPBELL_CSAT3"
+model = RM_YOUNG_81000
 
 [remove_beyond_threshold]
 horizontal_threshold = 30
@@ -12,8 +14,8 @@ vertical_threshold = 5
 temperature_threshold = 50
 
 [despiking]
-# despiking mode, two options: "VM97" to execute "Vickers and Mahrt, 1997" procedure or "robust", see documentation.
-despiking_mode = VM97
+# despiking method, two options: "VM97" to execute "Vickers and Mahrt, 1997" procedure or "robust", see documentation.
+despiking_method = VM97
 # legth in [min] of the moving window to perform the despiking procedure
 window_length_despiking = 5
 # maximum number of consecutive values over computed bounds to identify as spike
@@ -27,6 +29,13 @@ c_T = 3.5
 # constant for the definition of the upper and lower bounds (for the "robust" method only)
 c_robust = 0.5
 
+[rotation]
+# reference frame into which rotate the wind components, two options: "LEC" and "streamline" reference frame
+reference_frame = LEC
+# azimuth angle (with respect to the North) of the anemometer head (in degrees)
+azimuth = 0
+
+
 [averaging]
-legth in [min] of the moving window to compute the mean horizontal wind components
+# length in [min] of the moving window to compute the mean horizontal wind components, wind direction and the reynolds decomposition
 window_length_averaging = 5
