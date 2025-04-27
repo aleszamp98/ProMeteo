@@ -520,14 +520,14 @@ def wind_dir_LEC_reference(u: Union[np.ndarray, list, float, int],
     if u.shape != v.shape:
         raise ValueError(f"Shape mismatch: u.shape = {u.shape}, v.shape = {v.shape}")
 
-    wind_direction = (np.degrees(np.arctan2(u, v)) + 360) % 360
+    wind_direction = (np.degrees(np.arctan2(u, v)) + 180) % 360
     return wind_direction
 
 
 def wind_dir_modeldependent_reference(u: Union[np.ndarray, list, float, int],
-                                       v: Union[np.ndarray, list, float, int],
-                                       azimuth: float,
-                                       model: str) -> np.ndarray:
+                                      v: Union[np.ndarray, list, float, int],
+                                      azimuth: float,
+                                      model: str) -> np.ndarray:
     """
     Compute the wind direction based on the model of the anemometer and a custom azimuth.
 
@@ -565,75 +565,19 @@ def wind_dir_modeldependent_reference(u: Union[np.ndarray, list, float, int],
 
     # Compute wind direction based on the model's coordinate system
     if model == "RM_YOUNG_81000":
-        wind_dir = np.degrees(np.arctan2(-v, u))  # Reverse the v-component for this model
+        u_LEC =-u
+        v_LEC =-v
     elif model == "CAMPBELL_CSAT3":
-        wind_dir = np.degrees(np.arctan2(v, u))   # Use the original v-component for this model
+        u_LEC = v
+        v_LEC =-u
     else:
         raise ValueError(f"Unknown model: {model}. Supported models are 'RM_YOUNG_81000' and 'CAMPBELL_CSAT3'.")
 
-    wind_dir = wind_dir % 360  # normalize the angle between [0, 360)
+    # wind direction in a LEC system rotated of an angle azimuth with respect to the true North
+    wind_direction = (np.degrees(np.arctan2(u_LEC, v_LEC)) + 180) % 360
 
-    # azimuth offset to the wind direction
-    true_wind_dir = (wind_dir + azimuth) % 360
+    # remove the offset
+    # wind direction in the true LEC system
+    true_wind_direction = (wind_direction - azimuth) % 360
 
-    return true_wind_dir
-
-# def compute_wind_dir_young(u,v):
-#     wind_dir=np.degrees(np.arctan2(-v,u))
-#     # manage negative values
-#     where_neg=wind_dir<0
-#     wind_dir[where_neg]=wind_dir[where_neg]+360
-#     # rotate to have 0° when wind from North, 90° when wind from East
-#     true_wind_dir=wind_dir+90
-#     # manage values bigger than 360
-#     where_out=true_wind_dir>360
-#     true_wind_dir[where_out]=true_wind_dir[where_out]-360
-
-#     del where_neg
-#     del where_out
-#     return true_wind_dir
-
-# def compute_wind_dir_ES3csat(u,v):
-#     wind_dir=np.degrees(np.arctan2(-v,u))
-#     # manage negative values
-#     where_neg=wind_dir<0
-#     wind_dir[where_neg]=wind_dir[where_neg]+360
-#     # rotate to have 0° when wind from North, 90° when wind from East
-#     true_wind_dir=wind_dir+246
-#     # manage values bigger than 360
-#     where_out=true_wind_dir>360
-#     true_wind_dir[where_out]=true_wind_dir[where_out]-360
-
-#     del where_neg
-#     del where_out
-#     return true_wind_dir
-
-# def compute_wind_dir_ES5csat(u,v):
-#     wind_dir=np.degrees(np.arctan2(-v,u))
-#     # manage negative values
-#     where_neg=wind_dir<0
-#     wind_dir[where_neg]=wind_dir[where_neg]+360
-#     # no rotation needed
-#     true_wind_dir=wind_dir
-#     # manage values bigger than 360
-#     where_out=true_wind_dir>360
-#     true_wind_dir[where_out]=true_wind_dir[where_out]-360
-
-#     del where_neg
-#     del where_out
-#     return true_wind_dir
-
-# def compute_wind_dir_SBcsat(u,v):
-#     wind_dir=np.degrees(np.arctan2(-v,u))
-#     # manage negative values
-#     where_neg=wind_dir<0
-#     wind_dir[where_neg]=wind_dir[where_neg]+360
-#     # rotate to have 0° when wind from North, 90° when wind from East
-#     true_wind_dir=wind_dir+230
-#     # manage values bigger than 360
-#     where_out=true_wind_dir>360
-#     true_wind_dir[where_out]=true_wind_dir[where_out]-360
-
-#     del where_neg
-#     del where_out
-#     return true_wind_dir
+    return true_wind_direction
