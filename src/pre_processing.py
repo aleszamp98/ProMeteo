@@ -344,7 +344,7 @@ def rotation_to_LEC_reference(wind : np.ndarray,
                               model : str) -> np.ndarray: 
     """
     Rotate the wind vector from the anemometer reference system 
-    to the Local Earth Coordinate system (LEC), givent the orientation `azimuth`
+    to the Local Earth Coordinate system (LEC), given the orientation `azimuth`
     of the anemometer head with respect to the North.
 
     Parameters
@@ -419,16 +419,22 @@ def rotation_to_LEC_reference(wind : np.ndarray,
     
     return wind_rotated
 
+def rotation_to_streamline_reference(wind : np.ndarray, # model indipendent
+                                    wind_averaged : np.ndarray) -> np.ndarray:
+    # controllo sulla dimensione di wind e wind averaged
+    wind_rotated = np.full(wind.shape, np.nan)
+    return wind_rotated
 
+def wind_dir_LEC_reference(horizontal_wind : np.ndarray) -> np.ndarray:
+    # controllo sulla shape di horizontal wind
+    N = horizontal_wind.shape[1]
+    wind_direction = np.full(N, np.nan)
+    return wind_direction
 
-# # calcolo wind dir da sistema meteo standard
-# def wind_direction(u : np.ndarray,
-#                    v : np.ndarray,
-#                    bearing : float) -> np.ndarray:
-#     #controlla che u e v abbiano stessa lunghezza
-#     # bearing in gradi, controlla che sia tra 0 e 360
-
-#     N=len(u)
-#     wind_dir=np.full(N, 1.0)
-
-#     return wind_dir
+def wind_dir_modeldependent_reference(wind : np.ndarray,
+                                      azimuth : float,
+                                      model : str) -> np.ndarray:
+    # controllo sulla shape di wind averaged, valore di azimuth e modelli possibili
+    N = wind.shape[1]
+    wind_direction = np.full(N, np.nan)
+    return wind_direction # model dependent computation
