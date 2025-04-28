@@ -31,7 +31,7 @@ c_robust = 0.5
 
 [rotation]
 # reference frame into which rotate the wind components, two options: "LEC" and "streamline" reference frame
-reference_frame = LEC
+reference_frame = streamline
 # azimuth angle (with respect to the North) of the anemometer head (in degrees)
 azimuth = 0
 

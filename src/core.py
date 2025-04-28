@@ -160,7 +160,7 @@ def load_config(path : str) -> dict:
         'c_T' : c_T,
         'c_robust' : c_robust,
         'window_length_averaging': window_length_averaging,
-        'refence_frame': reference_frame,
+        'reference_frame': reference_frame,
         'azimuth' : azimuth,
     }
 
@@ -234,7 +234,7 @@ def min_to_points(minutes: int,
         Total number of data points in the signal for the given duration.
     """
     n_points = sampling_freq * minutes * 60
-    return n_points
+    return int(n_points)
 
 def running_stats(array: np.ndarray, 
                   window_length: int

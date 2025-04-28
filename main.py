@@ -42,7 +42,7 @@ model = params['model']
 horizontal_threshold = params['horizontal_threshold']
 vertical_threshold = params['vertical_threshold']
 temperature_threshold = params['temperature_threshold']
-despiking_mode = params['despiking_mode']
+despiking_method = params['despiking_method']
 window_length_despiking = params['window_length_despiking']
 max_length_spike = params['max_length_spike']
 max_iterations = params['max_iterations']
@@ -108,9 +108,9 @@ if window_length_despiking_points % 2 == 0:
 
 data_despiked = pd.DataFrame(index=data_cleaned.index, columns=data_cleaned.columns)
 
-if despiking_mode == "VM97":
+if despiking_method == "VM97":
     logger.info(f"""
-            - Mode: {despiking_mode}
+            - Mode: {despiking_method}
             - Moving window length: {window_length_despiking} min => {window_length_despiking_points} points
             - Maximum number of consecutive values to be considered spike: {max_length_spike}
             - Maximum number of iterations to perform: {max_iterations}
@@ -139,9 +139,9 @@ if despiking_mode == "VM97":
             """)
         del array_to_despike, replaced
 
-elif despiking_mode == "robust":
+elif despiking_method == "robust":
     logger.info(f"""
-            - Mode: {despiking_mode}
+            - Mode: {despiking_method}
             - Moving window length: {window_length_despiking} min => {window_length_despiking_points} points
             - Selected constant: {c_robust}
                 """)
@@ -210,18 +210,19 @@ logger.info(f"""
             """)
 
 data_rotated = pd.DataFrame(index=data_interp.index, columns=data_interp.columns)
-wind = np.full((3,len(data_rotated)), np.nan)
-wind_averaged = np.full( (3, len(data_interp)), np.nan)
+wind = np.array([data_interp['u'].to_numpy(),
+                 data_interp['v'].to_numpy(),
+                 data_interp['w'].to_numpy()])
+wind_averaged = np.full((3, len(data_interp)), 0.0)
 
 if reference_frame == "LEC":
     # ROTATION TO LEC (Local Earth Coordinate) System, given the type and azimuth of the instrument
     wind_rotated = pre_processing.rotation_to_LEC_reference(wind,
                                                             azimuth,
                                                             model)
-
     for i, component in enumerate(['u','v','w']):
-        wind_averaged[i,:] = core.running_stats(wind_rotated[i,:], # LEC wind components necessary in the wind_direction computation
-                                                window_length_averaging)
+        wind_averaged[i,:],_ = core.running_stats(wind_rotated[i,:], # LEC wind components necessary in the wind_direction computation
+                                                  window_length_averaging_points)
     wind_direction = pre_processing.wind_dir_LEC_reference(wind_averaged[0,:],
                                                            wind_averaged[1,:]) # only horizontal components in LEC system needee
     
@@ -229,11 +230,11 @@ if reference_frame == "LEC":
     
 # rotazione in un riferimento streamline (indipendente da orientazione)
 # riparte da componenti sistema intrinseco => compie media (può essere interna)
-#  => esegue rotazione sulla base delle compoennti medie
+#  => esegue rotazione sulla base delle componenti medie
 elif reference_frame == "streamline":
     for i, component in enumerate(['u','v','w']):
-        wind_averaged[i,:] = core.running_stats(data_interp[component].to_numpy, # non rotated wind components necessary in the wind_direction computation
-                                                window_length_averaging)
+        wind_averaged[i,:],_ = core.running_stats(data_interp[component].to_numpy(), # non rotated wind components necessary in the wind_direction computation
+                                                  window_length_averaging_points)
     wind_rotated = pre_processing.rotation_to_streamline_reference(wind, # model indipendent
                                                                    wind_averaged)
     wind_direction = pre_processing.wind_dir_modeldependent_reference(wind_averaged[0,:],
@@ -242,7 +243,6 @@ elif reference_frame == "streamline":
                                                                       model) # model dependent computation
     del wind_averaged # delete wind_averaged cause is in the old reference system, not useful to the next step: reynolds decomposition
 
-del data_interp
 
 # saving rotated data
 for i, component in enumerate(['u','v','w']):
@@ -254,7 +254,7 @@ data_rotated.to_csv(dir_out+f"data_preprocessed_rotated_{reference_frame}.csv",
                    na_rep='NaN',
                    float_format='%.7e', 
                    index=True)
-
+del data_interp
 del wind, wind_direction
 
 logger.info(f"""
@@ -279,8 +279,8 @@ logger.info(f"""
 #     #compute wind averaged in the streamline reference
 #     wind_averaged = np.full( (3, len(data_interp)), np.nan)
 #     for i, component in enumerate(['u','v','w']):
-#         wind_averaged[i,:] = core.running_stats(wind_rotated[i,:],
-#                                                 window_length_averaging)
+#         wind_averaged[i,:],_ = core.running_stats(wind_rotated[i,:],
+#                                                 )
 # elif reference_frame == "LEC":
 #     # wind averaged already computed in the rotation step
 #     pass
