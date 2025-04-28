@@ -464,7 +464,7 @@ def test_rotation_CAMPBELL_CSAT3_azimuth_zero():
     expected = np.array([
          wind[1,:],   # new x = old y
         -wind[0,:],   # new y = -old x
-         wind[2,:]   # z component unchanged
+         wind[2,:]    # z component unchanged
     ])
     
     np.testing.assert_array_equal(result, expected, err_msg="Something wrong...")
@@ -520,7 +520,7 @@ def test_rotation_CAMPBELL_CSAT3_with_azimuth():
     wind_LEC = np.array([
          wind[1,:],   # new x = old y
         -wind[0,:],   # new y = -old x
-         wind[2,:]   # z component unchanged
+         wind[2,:]    # z component unchanged
     ])
 
     expected = rot_azimuth @ wind_LEC
@@ -537,6 +537,10 @@ def test_basic_rotation():
         [0, 0, 0, 0],  # v component
         [0, 0, 0, 0],  # w component
     ])
+    # in order to have no rotation: azimuth angle and elevation angle have to be zero
+    # theta = np.arctan2(v_averaged, u_averaged)  # azimuth angle
+    # phi = np.arctan2(w_averaged, s)             # elevation angle
+    # so: v_averaged and w_averaged have to be zero
     wind_averaged = np.array([
         [1, 2, 3, 4],  # mean u component
         [0, 0, 0, 0],  # mean v component
@@ -545,7 +549,7 @@ def test_basic_rotation():
 
     wind_rotated = pre_processing.rotation_to_streamline_reference(wind, wind_averaged)
 
-    # Expect no rotation: the output should match the input
+    # Expect no rotation
     np.testing.assert_allclose(wind_rotated, wind, atol=1e-8)
 
 def test_shape_mismatch_error():
@@ -617,8 +621,8 @@ def test_output_shape():
 #     # The rotated x-component of the first sample should be 1
 #     np.testing.assert_allclose(wind_rotated[0, 0], 1.0, atol=1e-8)
 
-def test_rotation_with_y_vent():
-    # Test a case where the wind is purely along the y-axis.
+def test_rotation_with_wind_along_y():
+    # Test a case where the wind has to be rotated from the y-axis to the x-axis
 
     # Wind is purely along the y-axis: (0, v, 0) for each sample
     wind = np.array([
@@ -626,7 +630,10 @@ def test_rotation_with_y_vent():
         [1, 2, 3, 4],  # v component (non-zero along y-axis)
         [0, 0, 0, 0],  # w component
     ])
-    
+
+    # theta = np.arctan2(v_averaged, u_averaged)  # azimuth angle
+    # phi = np.arctan2(w_averaged, s)             # elevation angle
+
     # Averaged wind is purely horizontal along y (same for each sample)
     wind_averaged = np.array([
         [0, 0, 0, 0],  # mean u component (no horizontal wind in x)
@@ -634,7 +641,8 @@ def test_rotation_with_y_vent():
         [0, 0, 0, 0],  # mean w component (no vertical wind)
     ])
 
-    wind_rotated = pre_processing.rotation_to_streamline_reference(wind, wind_averaged)
+    wind_rotated = pre_processing.rotation_to_streamline_reference(wind,
+                                                                   wind_averaged)
 
     # After rotation, the x component should match the v component in magnitude
     np.testing.assert_allclose(wind_rotated[0, :], wind_averaged[1, :], atol=1e-8)
@@ -643,6 +651,71 @@ def test_rotation_with_y_vent():
     np.testing.assert_allclose(wind_rotated[1, :], 0, atol=1e-8)
     np.testing.assert_allclose(wind_rotated[2, :], 0, atol=1e-8)
 
+
+# devo controllare che la media di v e w del vettore ruotato
+# in un contesto reale, cioè in cui il vento medio è effettivamente la media del vento in input
+# sia 0 (che è il senso della rotazione streamline)
+
+def test_rotation_to_streamline_reference():
+    # build a fake wind signal at 1 Hz
+    # every 10 mins the wind changes direction => each segment in which the wind is constant has length 10*60 points
+    # From North, from N-E, from E, etc with angle differences of 45 degrees between segments
+    # 8 directions => 8*10min = 8*10*60 points
+    
+    u_base = [ 0, -1/np.sqrt(2), -1, -1/np.sqrt(2), 0,
+            1/np.sqrt(2), 1,  1/np.sqrt(2)]
+    v_base = [-1, -1/np.sqrt(2),  0,  1/np.sqrt(2), 1, 
+            1/np.sqrt(2), 0, -1/np.sqrt(2)]
+    w_base = [0, 0, 0, 0, 0,
+                0, 0, 0]
+    length_single = 15 * 60
+
+    wind = np.array([np.repeat(u_base, length_single),
+                        np.repeat(v_base, length_single),
+                        np.repeat(w_base, length_single)])
+    wind_averaged = np.full(wind.shape, 0.0)
+    window_length = 5*60 + 1 # 5 min window, odd number of points
+    for i in range(3):
+        wind_averaged[i,:],_ = core.running_stats(wind[i,:],window_length)
+
+    wind_rotated_result = pre_processing.rotation_to_streamline_reference(wind,
+                                                                            wind_averaged)
+    v_rotated_result_averaged,_ = core.running_stats(wind_rotated_result[1,:],
+                                                    window_length)
+
+
+    index_list_to_control = []
+    start_minutes = [5, 20, 35, 50, 65, 80, 95, 110]  # minuti di partenza
+
+    for start_min in start_minutes:
+        start_idx = start_min * 60
+        end_idx = (start_min + 5) * 60  # 5 minuti dopo
+        index_list_to_control.append(np.arange(start_idx, end_idx + 1, 1))
+
+    # Definiamo la soglia
+    threshold = 1e-5  # o qualsiasi altro valore tu voglia
+
+    # Mettiamo tutti gli indici da controllare in un unico array
+    indices_to_check = np.concatenate(index_list_to_control)
+
+    # Troviamo i punti che superano il threshold
+    mask_over_threshold = np.abs(v_rotated_result_averaged[indices_to_check]) > threshold
+
+    # Gli indici reali dei punti sopra soglia
+    bad_indices = indices_to_check[mask_over_threshold]
+    bad_values = v_rotated_result_averaged[bad_indices]
+
+    if bad_indices.size > 0:
+        error_message = (
+            f"Found {bad_indices.size} points exceeding the threshold {threshold}.\n"
+            f"indices = {bad_indices.tolist()}\n"
+            f"values = {bad_values.tolist()}"
+        )
+        np.testing.assert_equal(
+            bad_indices.size, 0,
+            err_msg=error_message
+        )
+    
 ##### testing pre_processing.wind_dir_LEC_reference() #####
 
 def test_wind_direction_scalar():
@@ -667,9 +740,6 @@ def test_wind_directions():
 
     result = pre_processing.wind_dir_LEC_reference(u, v)
     np.testing.assert_allclose(result, wind_dir_expected, rtol=1e-5)
-
-import numpy as np
-import pytest
 
 def test_wind_dir_LEC_reference_threshold():
     # Dati di esempio
@@ -770,3 +840,75 @@ def test_wind_dir_modeldependent_reference_threshold():
 
     assert np.isnan(result2[0]), f"Expected NaN for low wind speed, got {result2[0]}"
     assert np.isclose(result2[1], 0.0, atol=1e-2), f"Expected ~0 degrees, got {result2[1]}"
+
+
+# controlla che i risultati dati da wind dir su segnale ruotato e quello su segnale non ruotato
+# per entrambe le tipologie di strumenti
+# dia lo stesso risultato
+
+def test_comparison_wind_dir_methods_LEC_modeldependent_noazimuth():
+    # immaginando siano state misurate da RM_YOUNG_81000
+    u = [0, -1/np.sqrt(2), -1, -1/np.sqrt(2), 0,
+         1/np.sqrt(2), 1, 1/np.sqrt(2)]
+    v = [-1, -1/np.sqrt(2), 0, 1/np.sqrt(2), 1, 
+         1/np.sqrt(2), 0, -1/np.sqrt(2)]
+    w = np.full(len(u), 0)
+    
+    azimuth = 0
+    wind = np.array([u,v,w])
+    model = "RM_YOUNG_81000"
+
+    wind_dir_result_modeldependent = pre_processing.wind_dir_modeldependent_reference(u,v,azimuth,model)
+
+    wind_LEC = pre_processing.rotation_to_LEC_reference(wind, azimuth, model)
+    wind_dir_result_LEC = pre_processing.wind_dir_LEC_reference(wind_LEC[0,:],
+                                                                wind_LEC[1,:])
+    
+    np.testing.assert_array_equal(wind_dir_result_modeldependent, wind_dir_result_LEC, 
+                                  f"For model {model}: wind directions computed with the two different methods do NOT match!")
+
+    # immaginando siano state misurate da CAMPBELL_CSAT3
+    model = "CAMPBELL_CSAT3"
+
+    wind_dir_result_modeldependent = pre_processing.wind_dir_modeldependent_reference(u,v,azimuth,model)
+
+    wind_LEC = pre_processing.rotation_to_LEC_reference(wind, azimuth, model)
+    wind_dir_result_LEC = pre_processing.wind_dir_LEC_reference(wind_LEC[0,:],
+                                                                wind_LEC[1,:])
+    
+    np.testing.assert_array_equal(wind_dir_result_modeldependent, wind_dir_result_LEC, 
+                                  f"For model {model}: wind directions computed with the two different methods do NOT match!")
+
+
+def test_comparison_wind_dir_methods_LEC_modeldependent_with_azimuth():
+    # immaginando siano state misurate da RM_YOUNG_81000
+    u = [0, -1/np.sqrt(2), -1, -1/np.sqrt(2), 0,
+         1/np.sqrt(2), 1, 1/np.sqrt(2)]
+    v = [-1, -1/np.sqrt(2), 0, 1/np.sqrt(2), 1, 
+         1/np.sqrt(2), 0, -1/np.sqrt(2)]
+    w = np.full(len(u), 0)
+    
+    azimuth = 31
+    wind = np.array([u,v,w])
+    model = "RM_YOUNG_81000"
+
+    wind_dir_result_modeldependent = pre_processing.wind_dir_modeldependent_reference(u,v,azimuth,model)
+
+    wind_LEC = pre_processing.rotation_to_LEC_reference(wind, azimuth, model)
+    wind_dir_result_LEC = pre_processing.wind_dir_LEC_reference(wind_LEC[0,:],
+                                                                wind_LEC[1,:])
+    
+    np.testing.assert_array_equal(wind_dir_result_modeldependent, wind_dir_result_LEC, 
+                                  f"For model {model}: wind directions computed with the two different methods do NOT match!")
+
+    # immaginando siano state misurate da CAMPBELL_CSAT3
+    model = "CAMPBELL_CSAT3"
+
+    wind_dir_result_modeldependent = pre_processing.wind_dir_modeldependent_reference(u,v,azimuth,model)
+
+    wind_LEC = pre_processing.rotation_to_LEC_reference(wind, azimuth, model)
+    wind_dir_result_LEC = pre_processing.wind_dir_LEC_reference(wind_LEC[0,:],
+                                                                wind_LEC[1,:])
+    
+    np.testing.assert_array_equal(wind_dir_result_modeldependent, wind_dir_result_LEC, 
+                                  f"For model {model}: wind directions computed with the two different methods do NOT match!")
