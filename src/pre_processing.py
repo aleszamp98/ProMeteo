@@ -408,10 +408,12 @@ def rotation_to_LEC_reference(wind : np.ndarray,
     # ROTATION to LEC system with y-axis oriented to North
     azimuth = np.deg2rad(azimuth) # degree to radians conversion
     rot_azimuth = np.zeros((3,3))
-    rot_azimuth[0, 0] =  np.cos(azimuth) # input have to be angles in radians
-    rot_azimuth[0, 1] =  np.sin(azimuth)
-    rot_azimuth[1, 0] = -np.sin(azimuth)
-    rot_azimuth[1, 1] =  np.cos(azimuth)
+    cos_azimuth = np.cos(azimuth) # input have to be angles in radians
+    sin_azimuth = np.sin(azimuth)
+    rot_azimuth[0, 0] =  cos_azimuth
+    rot_azimuth[0, 1] =  sin_azimuth
+    rot_azimuth[1, 0] = -sin_azimuth
+    rot_azimuth[1, 1] =  cos_azimuth
     rot_azimuth[2, 2] =  1
 
     rot_total = np.matmul(rot_azimuth, rot_model)
@@ -470,15 +472,19 @@ def rotation_to_streamline_reference(wind: np.ndarray,
 
     # Build rotation matrices
     rot = np.zeros((3, 3, N))
-    rot[0, 0, :] = np.cos(phi) * np.cos(theta)
-    rot[0, 1, :] = np.cos(phi) * np.sin(theta)
-    rot[0, 2, :] = np.sin(phi)
-    rot[1, 0, :] = -np.sin(theta)
-    rot[1, 1, :] = np.cos(theta)
+    cos_phi = np.cos(phi)
+    sin_phi = np.sin(phi)
+    cos_theta = np.cos(theta)
+    sin_theta = np.sin(theta)
+    rot[0, 0, :] = cos_phi * cos_theta
+    rot[0, 1, :] = cos_phi * sin_theta
+    rot[0, 2, :] = sin_phi
+    rot[1, 0, :] =-sin_theta
+    rot[1, 1, :] = cos_theta
     rot[1, 2, :] = 0.0
-    rot[2, 0, :] = -np.sin(phi) * np.cos(theta)
-    rot[2, 1, :] = -np.sin(phi) * np.sin(theta)
-    rot[2, 2, :] = np.cos(phi)
+    rot[2, 0, :] =-sin_phi * cos_theta
+    rot[2, 1, :] =-sin_phi * sin_theta
+    rot[2, 2, :] = cos_phi
 
     # Apply rotation
     wind_rotated = np.einsum('ijk,jk->ik', rot, wind)
