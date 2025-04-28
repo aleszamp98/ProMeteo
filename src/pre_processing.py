@@ -486,7 +486,8 @@ def rotation_to_streamline_reference(wind: np.ndarray,
     return wind_rotated
 
 def wind_dir_LEC_reference(u: Union[np.ndarray, list, float, int], 
-                           v: Union[np.ndarray, list, float, int]) -> np.ndarray:
+                           v: Union[np.ndarray, list, float, int],
+                           threshold: float = 0.0) -> np.ndarray:
     """
     Compute wind direction from u and v wind components in a Local Earth Coordinate (LEC) reference system, 
     following the meteorological convention.
@@ -503,11 +504,13 @@ def wind_dir_LEC_reference(u: Union[np.ndarray, list, float, int],
         East-West wind component (positive towards East) in the LEC reference system.
     v : array_like or scalar
         North-South wind component (positive towards North) in the LEC reference system.
+    threshold : float, optional
+        Minimum horizontal wind speed modulus below which the wind direction is set to NaN. Default is 0.0.
 
     Returns
     -------
     wind_direction : ndarray
-        Wind direction in degrees, values between 0° and 360° (0 inclusive, 360 exclusive).
+        Wind direction in degrees, values between 0° and 360° (0 inclusive, 360 exclusive), or NaN if below threshold.
 
     Raises
     ------
@@ -521,13 +524,18 @@ def wind_dir_LEC_reference(u: Union[np.ndarray, list, float, int],
         raise ValueError(f"Shape mismatch: u.shape = {u.shape}, v.shape = {v.shape}")
 
     wind_direction = (np.degrees(np.arctan2(u, v)) + 180) % 360
+
+    wind_speed = np.sqrt(u**2 + v**2)
+    wind_direction = np.where(wind_speed < threshold, np.nan, wind_direction)
+
     return wind_direction
 
 
 def wind_dir_modeldependent_reference(u: Union[np.ndarray, list, float, int],
                                       v: Union[np.ndarray, list, float, int],
                                       azimuth: float,
-                                      model: str) -> np.ndarray:
+                                      model: str,
+                                      threshold: float = 0.0) -> np.ndarray:
     """
     Compute the wind direction based on the model of the anemometer and a custom azimuth.
 
@@ -541,11 +549,13 @@ def wind_dir_modeldependent_reference(u: Union[np.ndarray, list, float, int],
         The azimuth rotation in degrees to adjust the wind direction (e.g., instrument mounting offset).
     model : str
         The model of the anemometer, either "RM_YOUNG_81000" or "CAMPBELL_CSAT3".
+    threshold : float, optional
+        Minimum horizontal wind speed modulus below which the wind direction is set to NaN. Default is 0.0.
 
     Returns
     -------
     np.ndarray
-        The wind direction in degrees, with 0° corresponding to North, 90° to East, etc.
+        The wind direction in degrees, with 0° corresponding to North, 90° to East, etc., or NaN if below threshold.
 
     Raises
     ------
@@ -553,31 +563,28 @@ def wind_dir_modeldependent_reference(u: Union[np.ndarray, list, float, int],
         If the shapes of u and v do not match.
         If an unknown model is specified.
     """
-    
     u = np.asarray(u)
     v = np.asarray(v)
 
-    # Check for shape mismatch between u and v
     if u.shape != v.shape:
         raise ValueError(f"Shape mismatch: u.shape = {u.shape}, v.shape = {v.shape}")
 
     model = model.upper()
 
-    # Compute wind direction based on the model's coordinate system
     if model == "RM_YOUNG_81000":
-        u_LEC =-u
-        v_LEC =-v
+        u_LEC = -u
+        v_LEC = -v
     elif model == "CAMPBELL_CSAT3":
         u_LEC = v
-        v_LEC =-u
+        v_LEC = -u
     else:
         raise ValueError(f"Unknown model: {model}. Supported models are 'RM_YOUNG_81000' and 'CAMPBELL_CSAT3'.")
 
-    # wind direction in a LEC system rotated of an angle azimuth with respect to the true North
     wind_direction = (np.degrees(np.arctan2(u_LEC, v_LEC)) + 180) % 360
 
-    # remove the offset
-    # wind direction in the true LEC system
     true_wind_direction = (wind_direction - azimuth) % 360
+
+    wind_speed = np.sqrt(u**2 + v**2)
+    true_wind_direction = np.where(wind_speed < threshold, np.nan, true_wind_direction)
 
     return true_wind_direction

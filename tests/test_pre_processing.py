@@ -412,7 +412,7 @@ def test_all_nans():
 
 ##### testing pre_processing.rotation_to_LEC_reference() #####
 
-def test_invalid_azimuth_low():
+def test_invalid_azimuth():
     wind = np.zeros((3, 10))
     # lower than 0
     azimuth = -10
@@ -668,6 +668,21 @@ def test_wind_directions():
     result = pre_processing.wind_dir_LEC_reference(u, v)
     np.testing.assert_allclose(result, wind_dir_expected, rtol=1e-5)
 
+import numpy as np
+import pytest
+
+def test_wind_dir_LEC_reference_threshold():
+    # Dati di esempio
+    u = np.array([0.01, 1.0])
+    v = np.array([0.01, 0.0])
+    threshold = 0.1
+
+    result = pre_processing.wind_dir_LEC_reference(u, v, threshold=threshold)
+
+    assert np.isnan(result[0]), f"Expected NaN for low wind speed, got {result[0]}"
+    assert np.isclose(result[1], 270.0, atol=1e-2), f"Expected ~90 degrees, got {result[1]}"
+
+
 ##### testing pre_processing.wind_dir_modeldependent_reference() #####
 
 def test_wind_direction_scalar_modeldependent():
@@ -734,3 +749,24 @@ def test_wind_direction_with_azimuth():
     result_cs = pre_processing.wind_dir_modeldependent_reference(u, v, azimuth, model="CAMPBELL_CSAT3")
     expected_cs = [((angle + 90) - azimuth) % 360 for angle in [0, 45, 90, 135, 180, 225, 270, 315]]
     np.testing.assert_allclose(result_cs, expected_cs, rtol=1e-5)
+
+
+def test_wind_dir_modeldependent_reference_threshold():
+    # Dati di esempio
+    u = np.array([0.01, 1.0])
+    v = np.array([0.01, 0.0])
+    threshold = 0.1
+    azimuth = 0.0
+
+    # Test modello RM_YOUNG_81000
+    result = pre_processing.wind_dir_modeldependent_reference(u, v, azimuth, model="RM_YOUNG_81000", threshold=threshold)
+
+    # Controllo: il primo deve essere nan, il secondo un valore numerico corretto
+    assert np.isnan(result[0]), f"Expected NaN for low wind speed, got {result[0]}"
+    assert np.isclose(result[1], 90.0, atol=1e-2), f"Expected ~270 degrees, got {result[1]}"
+
+    # Test anche per modello CAMPBELL_CSAT3
+    result2 = pre_processing.wind_dir_modeldependent_reference(u, v, azimuth, model="CAMPBELL_CSAT3", threshold=threshold)
+
+    assert np.isnan(result2[0]), f"Expected NaN for low wind speed, got {result2[0]}"
+    assert np.isclose(result2[1], 0.0, atol=1e-2), f"Expected ~0 degrees, got {result2[1]}"
