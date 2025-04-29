@@ -16,7 +16,7 @@ def load_config(path : str) -> dict:
 
     Returns
     -------
-    dict
+    params : dict
         Dictionary containing the parameters for main.py .
 
     Raises
@@ -184,7 +184,7 @@ def import_data(path : str) -> pd.DataFrame:
 
     Returns
     -------
-    pandas.DataFrame
+    data : pandas.DataFrame
         DataFrame with the timestamp as the index (from the "Time" column) and columns ["u", "v", "w", "T_s"].
 
     Raises
@@ -230,7 +230,7 @@ def min_to_points(minutes: int,
 
     Returns
     -------
-    int
+    n_points : int
         Total number of data points in the signal for the given duration.
     """
     n_points = sampling_freq * minutes * 60
@@ -274,8 +274,7 @@ def running_stats(array: np.ndarray,
     Notes
     -----
     - The function pads the input array using constant values equals to the edge values of the array.
-    - If the input contains NaNs, they are ignored in the mean and std computation
-    using `np.nanmean` and `np.nanstd`.
+    - If the input contains NaNs, they are ignored in the mean and std computation using `np.nanmean` and `np.nanstd`.
     """
     if not isinstance(window_length, int) or window_length <= 0:
         raise ValueError("window_length must be a positive integer.")
@@ -334,6 +333,7 @@ def running_stats_robust(array: np.ndarray,
     ------
     ValueError
         If `window_length` is not a positive integer.
+    ValueError
         If `window_length` is greater than the length of the input array.
 
     Warns
