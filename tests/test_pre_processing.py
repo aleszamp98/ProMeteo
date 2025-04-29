@@ -745,6 +745,14 @@ def test_shape_mismatch():
     with pytest.raises(ValueError, match="Shape mismatch"):
         pre_processing.wind_dir_LEC_reference(u, v)
 
+def test_wind_dir_LEC_reference_negative_threshold():
+    u = [0]
+    v = [1]
+    threshold = -2
+
+    with pytest.raises(ValueError, match="positive"):
+        pre_processing.wind_dir_LEC_reference(u, v, threshold)
+
 def test_wind_directions():
     u = [ 0, -1/np.sqrt(2), -1, -1/np.sqrt(2), 0,
           1/np.sqrt(2), 1,  1/np.sqrt(2)]
@@ -799,6 +807,16 @@ def test_unknown_model():
 
     with pytest.raises(ValueError, match="Unknown model"):
         pre_processing.wind_dir_modeldependent_reference(u, v, azimuth, model="UNKNOWN_MODEL")
+
+def test_wind_dir_modeldependent_reference_negative_threshold():
+    u = [0]
+    v = [1]
+    azimuth = 0.0
+    model = "RM_YOUNG_81000"
+    threshold = -2
+
+    with pytest.raises(ValueError, match="positive"):
+        pre_processing.wind_dir_modeldependent_reference(u, v, azimuth, model, threshold)
 
 def test_wind_directions_modeldependent():
     u = [ 0, -1/np.sqrt(2), -1, -1/np.sqrt(2), 0,

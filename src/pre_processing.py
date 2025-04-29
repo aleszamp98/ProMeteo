@@ -528,12 +528,16 @@ def wind_dir_LEC_reference(u: Union[np.ndarray, list, float, int],
     ------
     ValueError
         If `u` and `v` are arrays and their shapes do not match.
+    ValueError
+        If `threshold` is negative.
     """
     u = np.asarray(u)
     v = np.asarray(v)
     
     if u.shape != v.shape:
         raise ValueError(f"Shape mismatch: u.shape = {u.shape}, v.shape = {v.shape}")
+    if threshold < 0:
+        raise ValueError(f" Threshold must be positive.")
 
     wind_direction = (np.degrees(np.arctan2(u, v)) + 180) % 360
 
@@ -575,12 +579,16 @@ def wind_dir_modeldependent_reference(u: Union[np.ndarray, list, float, int],
         If the shapes of u and v do not match.
     ValueError
         If an unknown model is specified.
+    ValueError
+        If `threshold` is negative.
     """
     u = np.asarray(u)
     v = np.asarray(v)
 
     if u.shape != v.shape:
         raise ValueError(f"Shape mismatch: u.shape = {u.shape}, v.shape = {v.shape}")
+    if threshold < 0:
+        raise ValueError(f" Threshold must be positive.")
 
     model = model.upper()
 
