@@ -37,8 +37,10 @@ def fill_missing_timestamps(data: pd.DataFrame,
     dt_s=1/freq
     freq = pd.to_timedelta(dt_s, unit='s') # pandas-compatible frequency string
     data = data.sort_index()    
-    full_index = pd.date_range(start=data.index.min(), end=data.index.max(), freq=freq) # Create the complete range of timestamps
-    complete_data = data.reindex(full_index) # Reindex the DataFrame to include all timestamps
+    # Create the complete range of timestamps
+    full_index = pd.date_range(start=data.index.min(), end=data.index.max(), freq=freq) 
+    # Reindex the DataFrame to include all timestamps
+    complete_data = data.reindex(full_index)
     
     return complete_data
     
@@ -110,7 +112,7 @@ def linear_interp(left_value : float,
     if not isinstance(length, int) or length <= 0:
         raise ValueError("`length` must be a positive integer.")
 
-    # Create an array of relative indices for the length
+    # Create an array of relative indices
     x = np.arange(1, length + 1)
     
     # Compute the interpolation
@@ -162,41 +164,43 @@ def identify_interp_spikes(array: np.ndarray,
     - Only sequences of True values that are smaller than or equal to `max_length_spike` are considered spikes.
     """
 
-    # --- Input validation ---
-    if len(array) != len(mask):
-        raise ValueError("`array` and `mask` must have the same length.")
-    if mask.dtype != bool:
-        raise ValueError("`mask` must be a boolean array.")
-    if not isinstance(max_length_spike, int) or max_length_spike <= 0:
-        raise ValueError("`max_length_spike` must be a positive integer.")
-
     # --- Spike detection and interpolation ---
-    flag = False
-    count_spike = 0
+    flag = False  # Flag to track the beginning of a spike sequence
+    count_spike = 0  # Counter to keep track of the total number of spikes detected
+
+    # Loop through the array to check each element
     for i in range(len(array)):
+        # Check if the mask indicates a True value at index i
         if mask[i]:
-            if flag == False: # first time of True value in the mask
-                spike_indices = [i] # save the index of the first True
-                flag = True # switch the flag
+            # If flag is False, it's the first time encountering a True value in the mask
+            if flag == False:
+                spike_indices = [i]  # Save the index of the first True value
+                flag = True  # Set the flag to True indicating a spike sequence has started
             else:
-                spike_indices.append(i) # saves the indices of the true values consecutive to the first 
+                # If the flag is True, append the index of consecutive True values
+                spike_indices.append(i)
         else:
-            if flag == True: # first time of False value after an isolated or a sequence of True values
-                length_spike = len(spike_indices) # counts how many True values are in the closed sequence
-                if length_spike <= max_length_spike: # the sequence is smaller than the maximum length => it's a spike
-                    # controls if the left border of the sequence is the first element of the array
-                    # or if the right border of the sequence is the last element of the array
-                    # in that case the interpolation can be performed
-                    if spike_indices[0] > 0 and spike_indices[-1] < len(array) - 1: 
+            # If the current mask value is False and a spike sequence was detected (flag is True)
+            if flag == True:
+                # Count the length of the detected spike sequence
+                length_spike = len(spike_indices)
+                # If the sequence is shorter than or equal to the max allowed spike length, treat it as a spike
+                if length_spike <= max_length_spike:
+                    # Check if interpolation is possible (the spike is not at the border of the array)
+                    if spike_indices[0] > 0 and spike_indices[-1] < len(array) - 1:
+                        # Retrieve the neighboring values for interpolation
                         left_value = array[spike_indices[0] - 1]
                         right_value = array[spike_indices[-1] + 1]
-                        array[spike_indices] = linear_interp(left_value,
-                                                             right_value,
-                                                             length_spike)
-                        count_spike = count_spike + 1 # increase the overall counter of spikes
-                flag=False # reset the flag
-                del spike_indices # clean the temporary variable
+                        # Perform linear interpolation to smooth the spike
+                        array[spike_indices] = linear_interp(left_value, right_value, length_spike)
+                        # Increment the spike count
+                        count_spike += 1
+                # Reset the flag and clean up the temporary variables
+                flag = False
+                del spike_indices  # Delete the spike indices list to free memory
+
     return array, count_spike
+
 
 
 def despiking_VM97(array_to_despike: np.ndarray,
@@ -269,32 +273,36 @@ def despiking_VM97(array_to_despike: np.ndarray,
         raise ValueError("`max_iterations` must be a positive integer.")
     
     # --- Despiking process ---
-    iteration = 0
-    c_increment = 0.1
-    current_c = c
-    array_despiked = array_to_despike.copy()
-    count_spike = 1  # value > 0 to enter the cycle
+    iteration = 0  # Counter for the number of iterations in the despiking process
+    c_increment = 0.1  # Increment value for adjusting the bounds in each iteration
+    current_c = c  # Initial multiplier for the standard deviation (controls the bounds)
+    array_despiked = array_to_despike.copy()  # Copy of the original array to be despiked
+    count_spike = 1  # Initial value greater than 0 to start the despiking cycle
 
+    # The loop continues until no more spikes are detected or the maximum number of iterations is reached
     while count_spike != 0 and iteration <= max_iterations:
-        running_mean, running_std = core.running_stats(array_despiked, 
-                                                       window_length)
+        # Calculate the running mean and standard deviation for the current array
+        running_mean, running_std = core.running_stats(array_despiked, window_length)
 
+        # Define the upper and lower bounds based on the running statistics and current multiplier (current_c)
         upper_bound = running_mean + current_c * running_std
         lower_bound = running_mean - current_c * running_std
 
+        # Create a mask to detect values beyond the defined bounds
         beyond_bounds_mask = (array_despiked > upper_bound) | (array_despiked < lower_bound)
 
-        array_despiked, count_spike = identify_interp_spikes(array_despiked,
-                                                             beyond_bounds_mask,
-                                                             max_consecutive_spikes)
+        # Identify and interpolate values that are beyond the bounds and respect max_length criterion (spikes)
+        array_despiked, count_spike = identify_interp_spikes(array_despiked, beyond_bounds_mask, max_consecutive_spikes)
         
-        if logger: logger.info(
-            f"""
-            Iteration: {iteration}, identified and removed spikes: {count_spike}
+        # Log the progress if the logger is enabled
+        if logger:
+            logger.info(f"""
+                Iteration: {iteration}, identified and removed spikes: {count_spike}
             """)
 
-        current_c += c_increment  # increase the distance between the upper and lower bound
-        iteration += 1
+        # Increase the multiplier for the next iteration to make the bounds wider
+        current_c += c_increment
+        iteration += 1  # Increment the iteration counter
 
     return array_despiked
 
@@ -348,17 +356,24 @@ def despiking_robust(array_to_despike: np.ndarray,
 
     array_despiked = array_to_despike.copy()
 
-    running_median, running_std_robust = core.running_stats_robust(array_despiked, 
-                                                                   window_length)
+    # Calculate the running median and robust standard deviation for the array
+    running_median, running_std_robust = core.running_stats_robust(array_despiked, window_length)
+
+    # Compute the delta (threshold for spike detection) as the maximum between c times the robust standard deviation and 0.5
     delta = np.maximum(c * running_std_robust, 0.5)
+
+    # Define the upper and lower bounds based on the running median and the computed delta
     upper_bound = running_median + delta
     lower_bound = running_median - delta
 
+    # Create a mask to detect values that lie outside the defined bounds (spikes)
     beyond_bounds_mask = (array_despiked > upper_bound) | (array_despiked < lower_bound)
-    
+
+    # Count the number of spikes (values that are beyond the bounds)
     count_spike = np.sum(beyond_bounds_mask)
 
-    array_despiked[beyond_bounds_mask] = running_median[beyond_bounds_mask] # replaces values with the running median where beyond computed bounds
+    # Replace the values that are outside the bounds with the corresponding values from the running median
+    array_despiked[beyond_bounds_mask] = running_median[beyond_bounds_mask]
 
     return array_despiked, count_spike
 
@@ -385,32 +400,44 @@ def interp_nan(array: np.ndarray
         Number of NaN values that were successfully interpolated.
     """
     array_interp = array.copy()
+    # Identify where NaN values are present in the array
     isnan = np.isnan(array_interp)
+
+    # Initialize a counter for the number of interpolated values
     count_interp = 0
 
+    # Initialize the index to iterate through the array
     i = 0
     while i < len(array_interp):
+        # If a NaN value is found, start the interpolation process
         if isnan[i]:
-            start = i
+            start = i  # Store the index of the first NaN value in the sequence
+            # Continue moving the index while NaN values are encountered
             while i < len(array_interp) and isnan[i]:
                 i += 1
-            end = i
+            end = i  # Store the index where the NaN sequence ends
 
+            # Skip interpolation if the NaN sequence is at the edges of the array
             if start == 0 or end == len(array_interp):
-                continue  # cannot interpolate at the edges
+                continue
 
+            # Get the surrounding values for interpolation (left and right of the NaN sequence)
             left_value = array_interp[start - 1]
             right_value = array_interp[end]
+
+            # Calculate the length of the NaN sequence
             length = end - start
 
-            interpolated = linear_interp(left_value,
-                                         right_value,
-                                         length)
-            
+            # Perform linear interpolation for the NaN values
+            interpolated = linear_interp(left_value, right_value, length)
+
+            # Replace the NaN values with the interpolated values
             array_interp[start:end] = interpolated
 
+            # Update the counter for the number of interpolated values
             count_interp += length
         else:
+            # Move to the next index if the current value is not NaN
             i += 1
 
     return array_interp, count_interp
@@ -464,45 +491,61 @@ def rotation_to_LEC_reference(wind : np.ndarray,
     
     # ROTATION from the intrinsic reference system of the instrument
     # to a standard reference frame with:
-    # u positive if concordant with x-axis
-    # v positive if concordant with y-axis
-    # with the y-axis oriented in the direction 
-    # defined by the azimuth angle with respect to North (positive clockwise)
-    # the rotation matrix depends on the anemometer model
+    # - u positive if aligned with the x-axis
+    # - v positive if aligned with the y-axis
+    # The y-axis is oriented in the direction defined by the azimuth angle relative to North (positive clockwise)
+    # The rotation matrix depends on the anemometer model used.
 
     # --- Input validation ---
+    # Ensure the 'wind' array has 3 rows (representing 3 components: u, v, w)
     if wind.shape[0] != 3:
         raise ValueError("'wind' must have shape (3, N)")
+
+    # Ensure the azimuth value is within the valid range [0, 360]
     if not (0 <= azimuth <= 360):
-        raise ValueError( "azimuth is outside the range [0,360].")
-    
-    rot_model = np.zeros((3,3))
+        raise ValueError("azimuth is outside the range [0,360].")
+
+    # Initialize a 3x3 rotation matrix depending on the anemometer model
+    rot_model = np.zeros((3, 3))
+
+    # Set rotation matrix based on the model
     if model == "RM_YOUNG_81000":
-        rot_model[0,0] = -1
-        rot_model[1,1] = -1
-        rot_model[2,2] =  1
+        rot_model[0, 0] = -1
+        rot_model[1, 1] = -1
+        rot_model[2, 2] = 1
     elif model == "CAMPBELL_CSAT3":
-        rot_model[0,1] =  1
-        rot_model[1,0] = -1
-        rot_model[2,2] =  1
+        rot_model[0, 1] = 1
+        rot_model[1, 0] = -1
+        rot_model[2, 2] = 1
     else:
         raise ValueError(f"Unknown model: {model}")
 
-    # ROTATION to LEC system with y-axis oriented to North
-    azimuth = np.deg2rad(azimuth) # degree to radians conversion
-    rot_azimuth = np.zeros((3,3))
-    cos_azimuth = np.cos(azimuth) # input have to be angles in radians
-    sin_azimuth = np.sin(azimuth)
-    rot_azimuth[0, 0] =  cos_azimuth
-    rot_azimuth[0, 1] =  sin_azimuth
-    rot_azimuth[1, 0] = -sin_azimuth
-    rot_azimuth[1, 1] =  cos_azimuth
-    rot_azimuth[2, 2] =  1
+    # --- Rotation to LEC system with y-axis oriented to North ---
+    # Convert azimuth from degrees to radians
+    azimuth = np.deg2rad(azimuth)
 
+    # Initialize rotation matrix for azimuth
+    rot_azimuth = np.zeros((3, 3))
+
+    # Calculate the cosine and sine of the azimuth angle
+    cos_azimuth = np.cos(azimuth)
+    sin_azimuth = np.sin(azimuth)
+
+    # Define the rotation matrix for the azimuth transformation
+    rot_azimuth[0, 0] = cos_azimuth
+    rot_azimuth[0, 1] = sin_azimuth
+    rot_azimuth[1, 0] = -sin_azimuth
+    rot_azimuth[1, 1] = cos_azimuth
+    rot_azimuth[2, 2] = 1
+
+    # Combine the azimuth rotation and the model-specific rotation matrix
     rot_total = np.matmul(rot_azimuth, rot_model)
+
+    # Apply the total rotation matrix to the wind data
     wind_rotated = np.matmul(rot_total, wind)
-    
+
     return wind_rotated
+
 
 def rotation_to_streamline_reference(wind: np.ndarray,
                                      wind_averaged: np.ndarray
@@ -618,9 +661,11 @@ def wind_dir_LEC_reference(u: Union[np.ndarray, list, float, int],
         raise ValueError(f"Shape mismatch: u.shape = {u.shape}, v.shape = {v.shape}")
     if threshold < 0:
         raise ValueError(f" Threshold must be positive.")
-
+    # Calculate the wind speed as the Euclidean norm of the u and v components
     wind_direction = (np.degrees(np.arctan2(u, v)) + 180) % 360
-
+    # Apply thresholding to wind direction
+    # If the wind speed is below the specified threshold, the wind direction is set to NaN.
+    # This step ignores directions where the wind speed is too low to be meaningful.
     wind_speed = np.sqrt(u**2 + v**2)
     wind_direction = np.where(wind_speed < threshold, np.nan, wind_direction)
 
@@ -671,22 +716,37 @@ def wind_dir_modeldependent_reference(u: Union[np.ndarray, list, float, int],
     if threshold < 0:
         raise ValueError(f" Threshold must be positive.")
 
+    # Convert the model name to uppercase to ensure case-insensitivity
     model = model.upper()
 
+    # --- Set the wind components based on the anemometer model ---
+    # Based on the model, adjust the wind components (u, v) to align with the LEC system.
     if model == "RM_YOUNG_81000":
-        u_LEC = -u
-        v_LEC = -v
+        u_LEC = -u   # Reverse the direction of the u component
+        v_LEC = -v   # Reverse the direction of the v component
     elif model == "CAMPBELL_CSAT3":
-        u_LEC = v
-        v_LEC = -u
+        u_LEC = v    # Swap the u and v components
+        v_LEC = -u   # Reverse the direction of the u component
     else:
+        # Raise an error if the model is not recognized
         raise ValueError(f"Unknown model: {model}. Supported models are 'RM_YOUNG_81000' and 'CAMPBELL_CSAT3'.")
 
+    # --- Calculate the wind direction in the LEC system ---
+    # Calculate the wind direction using the atan2 function, then convert it to degrees.
     wind_direction = (np.degrees(np.arctan2(u_LEC, v_LEC)) + 180) % 360
 
+    # --- Calculate the true wind direction ---
+    # The true wind direction is obtained by subtracting the azimuth angle from the wind direction.
     true_wind_direction = (wind_direction - azimuth) % 360
 
+    # --- Calculate the wind speed ---
+    # The wind speed is computed as the Euclidean norm of the u and v components.
     wind_speed = np.sqrt(u**2 + v**2)
+
+    # --- Thresholding ---
+    # If the wind speed is below the specified threshold, set the true wind direction to NaN.
+    # This step ignores directions where the wind speed is too low to be meaningful.
     true_wind_direction = np.where(wind_speed < threshold, np.nan, true_wind_direction)
 
     return true_wind_direction
+
