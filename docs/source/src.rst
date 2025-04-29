@@ -1,21 +1,11 @@
-ProMeteo Modules
-================
-
-Submodules
-----------
+ProMeteo Documentation
+======================
+Welcome to the ProMeteo documentation!
 
 core module
 ------------
 
 .. automodule:: core
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-plotting module
----------------
-
-.. automodule:: plotting
    :members:
    :undoc-members:
    :show-inheritance:
@@ -32,6 +22,14 @@ reynolds module
 ---------------
 
 .. automodule:: reynolds
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+plotting module
+---------------
+
+.. automodule:: plotting
    :members:
    :undoc-members:
    :show-inheritance:
