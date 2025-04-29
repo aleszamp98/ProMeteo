@@ -194,7 +194,7 @@ def test_linear_interp_invalid_length():
     # Act & Assert: check ValueError is raised for non-integer length
     length = 3.5
     with pytest.raises(ValueError, match="positive"):
-        pre_proc
+        pre_processing.linear_interp(left_value, right_value, length)
 
 #######################################################################
 ########### testing pre_processing.identify_interp_spikes() ###########
