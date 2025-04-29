@@ -68,10 +68,12 @@ import core
 #     read_files = config.read(config_path)
 #     assert read_files == []  # Deve restituire una lista vuota
 
+#######################################################################
+################## testing core.import_data() #########################
+#######################################################################
 
-##### testing core.import_data() #####
-
-def test_import_valid_file(tmp_path):
+def test_import_data_valid_file(tmp_path):
+    # Arrange: create a valid CSV file with expected columns and content
     file_path = tmp_path / "try.csv"
     file_content = (
         "Time,u,v,w,T_s\n"
@@ -80,16 +82,23 @@ def test_import_valid_file(tmp_path):
     )
     file_path.write_text(file_content)
     
+    # Act: import the CSV file
     df = core.import_data(file_path)
-    assert isinstance(df, pd.DataFrame) # Test if the variable is a DataFrame
-    assert list(df.columns) == ["u", "v", "w", "T_s"] # Test if the columns are the expected ones
-    assert isinstance(df.index[0], pd.Timestamp) # Test if the index is in datetime format
+    
+    # Assert: check if the output is a DataFrame
+    assert isinstance(df, pd.DataFrame)
+    # Assert: check if the columns match the expected ones
+    assert list(df.columns) == ["u", "v", "w", "T_s"]
+    # Assert: check if the index is in datetime format
+    assert isinstance(df.index[0], pd.Timestamp)
 
-def test_file_not_found():
+def test_import_data_file_not_found():
+    # Act & Assert: check if importing a non-existent file raises a FileNotFoundError
     with pytest.raises(FileNotFoundError):
-        core.import_data("fail.csv") # Test a failing import
+        core.import_data("fail.csv")
 
-def test_invalid_columns(tmp_path):
+def test_import_data_invalid_columns(tmp_path):
+    # Arrange: create a CSV file with incorrect column names
     file_path = tmp_path / "bad_columns.csv"
     file_content = (
         "Timestamp,u,v,w,T_s\n"  # "Time" -> "Timestamp"
@@ -97,10 +106,12 @@ def test_invalid_columns(tmp_path):
     )
     file_path.write_text(file_content)
 
+    # Act & Assert: check if importing the file raises a ValueError with the expected message
     with pytest.raises(ValueError, match="Expected columns"):
-        core.import_data(file_path) #Test the exception in case of wrong col names or order
+        core.import_data(file_path)
 
-def test_invalid_timestamps(tmp_path):
+def test_import_data_invalid_timestamps(tmp_path):
+    # Arrange: create a CSV file with invalid timestamp format
     file_path = tmp_path / "bad_time.csv"
     file_content = (
         "Time,u,v,w,T_s\n"
@@ -108,85 +119,103 @@ def test_invalid_timestamps(tmp_path):
     )
     file_path.write_text(file_content)
 
+    # Act & Assert: check if importing the file raises a ValueError with the expected message
     with pytest.raises(ValueError, match="non-valid"):
-        core.import_data(file_path) #Test the exception in case of non-valid entries in the "Time" column
+        core.import_data(file_path)
 
-##### testing core.min_to_points() #####
+#######################################################################
+################## testing core.min_to_points() #######################
+#######################################################################
 
 def test_min_to_points():
-    assert core.min_to_points(1, 1) == 60 # 1 min, 1 Hz
-    assert core.min_to_points(10, 1) == 600 # 10 min, 1 Hz
-    assert core.min_to_points(5, 2) == 600 # 5 min, 2 Hz
-    assert core.min_to_points(10, 0) == 0 #  10 min, 0 Hz
-    assert core.min_to_points(0, 1) == 0 # 0 min, 1 Hz
+    # Act & Assert: check the conversion of minutes to points for different cases
+    assert core.min_to_points(1, 1) == 60  # 1 min, 1 Hz
+    assert core.min_to_points(10, 1) == 600  # 10 min, 1 Hz
+    assert core.min_to_points(5, 2) == 600  # 5 min, 2 Hz
+    assert core.min_to_points(10, 0) == 0  # 10 min, 0 Hz
+    assert core.min_to_points(0, 1) == 0  # 0 min, 1 Hz
 
-
-##### testing core.running_stats() #####
+######################################################################
+################## testing core.running_stats() ######################
+######################################################################
 
 def test_running_stats_odd_window():
-    array = np.array([1, 2, 3, 4, 5]) # test with odd window
+    # Arrange: create an array with odd window length
+    array = np.array([1, 2, 3, 4, 5])  # test with odd window
     window_length = 3
+    
+    # Act: calculate running mean and std
     mean, std = core.running_stats(array, window_length)
 
+    # Expected results
     expected_mean = np.array([1.333, 2.0, 3.0, 4.0, 4.667])
     expected_std = np.array([0.471, 0.816, 0.816, 0.816, 0.471])
 
+    # Assert: check if the mean and std are correct
     assert_almost_equal(mean, expected_mean, decimal=3)
     assert_almost_equal(std, expected_std, decimal=3)
 
-def test_running_stats_even_window(): #test the raising of the warning for an even window
+def test_running_stats_even_window():
+    # Arrange: create an array with even window length
     array = np.array([1, 2, 3, 4, 5])
     window_length = 4
 
+    # Act & Assert: check if a warning is raised for an even window length
     with pytest.warns(UserWarning, match="window_length is even"):
         core.running_stats(array, window_length)
 
 def test_running_stats_with_nans():
-    # Test con NaN nell'array
+    # Arrange: create an array with NaN values
     array = np.array([1, 2, np.nan, 4, 5])
     window_length = 3
+    
+    # Act: calculate running mean and std
     mean, std = core.running_stats(array, window_length)
 
-    expected_mean = np.array([1.333, 1.5, 3.0, 4.500, 4.667]) #[0]: 1+1+2=4, 4/3=1.33; [1]: 1+2+NaN=3, 3/2=1.5; [2]: 2+NaN+4=6, 6/2=3; [3]: NaN+4+5=9, 9/2=4.5 ; [4]: 4+5+5=14, 14/3=4.66
-    expected_std = np.array([0.471, 0.5, 1, 0.5, 0.471]) 
+    # Expected results
     # [0]: (1,1,2), mean = 1.333, deviations = (-0.333, -0.333, 0.667),
     #       squared = (0.111, 0.111, 0.445), mean squared = 0.222, sqrt = 0.471
-
     # [1]: (1,2,nan), mean = 1.5, deviations = (-0.5, 0.5),
     #       squared = (0.25, 0.25), mean squared = 0.25, sqrt = 0.5
-
     # [2]: (2,nan,4), mean = 3, deviations = (-1, 1),
     #       squared = (1, 1), mean squared = 1, sqrt = 1
-
     # [3]: (nan,4,5), mean = 4.5, deviations = (-0.5, 0.5),
     #       squared = (0.25, 0.25), mean squared = 0.25, sqrt = 0.5
-
     # [4]: (4,5,5), mean = 4.667, deviations = (-0.667, 0.333, 0.333),
     #       squared = (0.445, 0.111, 0.111), mean squared = 0.222, sqrt = 0.471
+    expected_mean = np.array([1.333, 1.5, 3.0, 4.500, 4.667])
+    expected_std = np.array([0.471, 0.5, 1, 0.5, 0.471])
 
+    # Assert: check if the mean and std are correct
     assert_almost_equal(mean, expected_mean, decimal=3)
     assert_almost_equal(std, expected_std, decimal=3)
 
 
 def test_running_stats_invalid_window():
+    # Arrange: create an array for invalid window length tests
     array = np.array([1, 2, 3, 4, 5])
     
-    with pytest.raises(ValueError): # zero length window
+    # Act & Assert: check if ValueError is raised for invalid window lengths
+    with pytest.raises(ValueError):  # zero length window
         core.running_stats(array, window_length=0)
 
-    with pytest.raises(ValueError): # negative window length
+    with pytest.raises(ValueError):  # negative window length
         core.running_stats(array, window_length=-1)
 
-    with pytest.raises(ValueError): # window is longer than the array
+    with pytest.raises(ValueError):  # window is longer than the array
         core.running_stats(array, window_length=6)
 
-##### testing core.running_stats_robust() #####
+#######################################################################
+############# testing core.running_stats_robust() #####################
+#######################################################################
 
 def test_running_stats_robust_odd_window():
+    # Arrange: create an array with odd window length
     array = np.array([1, 2, 3, 4, 5])
     window_length = 3
     median, std_robust = core.running_stats_robust(array, window_length)
 
+    # Arrange: create arrays for calculating median and percentiles
     arrays = [
         np.array([1, 1, 2]),
         np.array([1, 2, 3]),
@@ -203,24 +232,30 @@ def test_running_stats_robust_odd_window():
         percentile_84[i] = np.percentile(array, 84)
         percentile_16[i] = np.percentile(array, 16)
 
+    # Expected results
     expected_median = median
-    expected_std_robust = 0.5*(percentile_84-percentile_16)
+    expected_std_robust = 0.5 * (percentile_84 - percentile_16)
 
+    # Assert: check if the median and robust std are correct
     assert_almost_equal(median, expected_median, decimal=3)
     assert_almost_equal(std_robust, expected_std_robust, decimal=3)
 
 def test_running_stats_robust_even_window():
+    # Arrange: create an array with even window length
     array = np.array([1, 2, 3, 4, 5])
     window_length = 4
 
+    # Act & Assert: check if a warning is raised for an even window length
     with pytest.warns(UserWarning, match="window_length is even"):
         core.running_stats_robust(array, window_length)
 
 def test_running_stats_robust_with_nans():
+    # Arrange: create an array with NaN values
     array = np.array([1, 2, np.nan, 4, 5])
     window_length = 3
     median, std_robust = core.running_stats_robust(array, window_length)
 
+    # Arrange: create arrays for calculating median and percentiles with NaN handling
     arrays = [
         np.array([1, 1, 2]),
         np.array([1, 2, np.nan]),
@@ -237,15 +272,19 @@ def test_running_stats_robust_with_nans():
         percentile_84[i] = np.nanpercentile(array, 84)
         percentile_16[i] = np.nanpercentile(array, 16)
 
+    # Expected results
     expected_median = median
-    expected_std_robust = 0.5*(percentile_84-percentile_16)
+    expected_std_robust = 0.5 * (percentile_84 - percentile_16)
 
+    # Assert: check if the median and robust std are correct
     assert_almost_equal(median, expected_median, decimal=3)
     assert_almost_equal(std_robust, expected_std_robust, decimal=3)
 
 def test_running_stats_robust_invalid_window():
+    # Arrange: create an array for invalid window length tests
     array = np.array([1, 2, 3, 4, 5])
 
+    # Act & Assert: check if ValueError is raised for invalid window lengths
     with pytest.raises(ValueError):
         core.running_stats_robust(array, window_length=0)
 
@@ -254,3 +293,8 @@ def test_running_stats_robust_invalid_window():
 
     with pytest.raises(ValueError):
         core.running_stats_robust(array, window_length=6)
+
+
+#######################################################################
+#######################################################################
+#######################################################################

@@ -1246,3 +1246,7 @@ def test_comparison_wind_dir_methods_LEC_modeldependent_with_azimuth():
     # Assert: Check if the results from the two methods are equal
     np.testing.assert_array_equal(wind_dir_result_modeldependent, wind_dir_result_LEC, 
                                   f"For model {model}: wind directions computed with the two different methods do NOT match!")
+
+#######################################################################
+#######################################################################
+#######################################################################
