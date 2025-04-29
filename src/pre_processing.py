@@ -231,12 +231,32 @@ def despiking_VM97(array_to_despike: np.ndarray,
     np.ndarray
         The despiked version of the input array.
     
+    Raises
+    ------
+    ValueError
+        If `c` is not a positive number.
+        If `window_length` is not a positive integer.
+        If `max_consecutive_spikes` is not a positive integer.
+        If `max_iterations` is not a positive integer.
+        If `logger` is not a logging.Logger instance or None.
+    
     References
     ----------
     Vickers, D., & Mahrt, L. (1997). Quality control and flux sampling problems for tower and aircraft data.
     Journal of Atmospheric and Oceanic Technology, 14(3), 512–526. https://doi.org/10.1175/1520-0426(1997)014<0512:QCAFSP>2.0.CO;2
     """
-
+    
+    # --- Input validation ---
+    if not (isinstance(c, (int, float)) and c > 0):
+        raise ValueError("`c` must be a positive number.")
+    if not isinstance(window_length, int) or window_length <= 0:
+        raise ValueError("`window_length` must be a positive integer.")
+    if not isinstance(max_consecutive_spikes, int) or max_consecutive_spikes <= 0:
+        raise ValueError("`max_consecutive_spikes` must be a positive integer.")
+    if not isinstance(max_iterations, int) or max_iterations <= 0:
+        raise ValueError("`max_iterations` must be a positive integer.")
+    
+    # --- Despiking process ---
     iteration = 0
     c_increment = 0.1
     current_c = c
@@ -299,7 +319,20 @@ def despiking_robust(array_to_despike: np.ndarray,
         The despiked version of the input array, with spikes replaced by the running median.
     int
         The total number of spikes detected and replaced.
+        
+    Raises
+    ------
+    ValueError
+        If `c` is not positive.
+    ValueError
+        If `window_length` is not a positive integer.
     """
+
+    if not isinstance(c, (int, float)) or c <= 0:
+        raise ValueError("Parameter `c` must be a positive number.")
+    if not isinstance(window_length, int) or window_length <= 0:
+        raise ValueError("Parameter `window_length` must be a positive integer.")
+
     array_despiked = array_to_despike.copy()
 
     running_median, running_std_robust = core.running_stats_robust(array_despiked, 
@@ -316,8 +349,6 @@ def despiking_robust(array_to_despike: np.ndarray,
 
     return array_despiked, count_spike
 
-
-import numpy as np
 
 def interp_nan(array: np.ndarray) -> Tuple[np.ndarray, int]:
     """

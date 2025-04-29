@@ -549,6 +549,27 @@ def test_despiking_VM97_logger_usage(caplog):
     # Assert: log includes information about iterations
     assert "Iteration:" in caplog.text, "Logger did not record any string 'Iteration:'"
 
+def test_despiking_VM97_errors():
+    # Arrange: create a dummy input array
+    array = np.array([1.0, 2.0, 100.0, 2.0, 1.0])
+    valid_logger = logging.getLogger("test_logger")
+
+    # Act & Assert: check ValueError for non-positive c
+    with pytest.raises(ValueError, match="positive number"):
+        pre_processing.despiking_VM97(array, c=0, window_length=3, max_consecutive_spikes=1, max_iterations=5)
+
+    # Act & Assert: check ValueError for non-positive window_length
+    with pytest.raises(ValueError, match="positive integer"):
+        pre_processing.despiking_VM97(array, c=1.0, window_length=0, max_consecutive_spikes=1, max_iterations=5)
+
+    # Act & Assert: check ValueError for non-positive max_consecutive_spikes
+    with pytest.raises(ValueError, match="positive integer"):
+        pre_processing.despiking_VM97(array, c=1.0, window_length=3, max_consecutive_spikes=0, max_iterations=5)
+
+    # Act & Assert: check ValueError for non-positive max_iterations
+    with pytest.raises(ValueError, match="positive integer"):
+        pre_processing.despiking_VM97(array, c=1.0, window_length=3, max_consecutive_spikes=1, max_iterations=0)
+
 #######################################################################
 ########### testing pre_processing.despiking_robust() #################
 #######################################################################
@@ -662,6 +683,31 @@ def test_despiking_robust_preserves_normal_values():
         despiked_array,
         err_msg="Non-spike values incorrectly modified."
     )
+
+def test_despiking_robust_errors():
+    # Arrange: valid input array
+    input_array = np.ones(10)
+
+    # Act & Assert: invalid c = 0
+    with pytest.raises(ValueError, match="positive"):
+        pre_processing.despiking_robust(input_array, c=0, window_length=3)
+
+    # Act & Assert: invalid c < 0
+    with pytest.raises(ValueError, match="positive"):
+        pre_processing.despiking_robust(input_array, c=-1.0, window_length=3)
+
+    # Act & Assert: invalid window_length = 0
+    with pytest.raises(ValueError, match="positive"):
+        pre_processing.despiking_robust(input_array, c=2.0, window_length=0)
+
+    # Act & Assert: invalid window_length < 0
+    with pytest.raises(ValueError, match="positive"):
+        pre_processing.despiking_robust(input_array, c=2.0, window_length=-5)
+
+    # Act & Assert: non-integer window_length
+    with pytest.raises(ValueError, match="positive"):
+        pre_processing.despiking_robust(input_array, c=2.0, window_length=4.5)
+
 
 #######################################################################
 ################ testing pre_processing.interp_nan() ##################
