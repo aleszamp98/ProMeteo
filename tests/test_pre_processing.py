@@ -14,141 +14,233 @@ import core
 # setting seed for the generation of random sequences in the script
 np.random.seed(42)
 
+#######################################################################
+####### testing pre_processing.test_fill_missing_regular_case() #######
+#######################################################################
 
-##### testing pre_processing.test_fill_missing_regular_case() #####
-
-def test_fill_missing_regular_case():
-    # Original data: samples at 1 Hz, missing one sample
+def test_fill_missing_timestamps_regular_case():
+    # Arrange: create a DataFrame with a missing timestamp at second 2, with sampling freq of 1 Hz
     times = pd.to_datetime([
         '2023-01-01 00:00:00',
         '2023-01-01 00:00:01',
         '2023-01-01 00:00:03'  # missing second 2
     ])
     df = pd.DataFrame({'value': [1, 2, 4]}, index=times)
+    sampling_freq = 1
 
-    result = pre_processing.fill_missing_timestamps(df, freq=1)
+    # Act: fill missing timestamps
+    result = pre_processing.fill_missing_timestamps(df, sampling_freq)
     expected_index = pd.date_range('2023-01-01 00:00:00', '2023-01-01 00:00:03', freq='1s')
-
-    # Check that the index is complete
-    assert all(result.index == expected_index)
-
-    # Check that original values are preserved
+    
+    # Assert: the index is complete
+    assert all(result.index == expected_index) 
+    # Assert: original values are preserved
     assert result.loc['2023-01-01 00:00:00', 'value'] == 1
     assert result.loc['2023-01-01 00:00:01', 'value'] == 2
     assert np.isnan(result.loc['2023-01-01 00:00:02', 'value'])
     assert result.loc['2023-01-01 00:00:03', 'value'] == 4
 
-def test_no_missing_timestamps():
-    # Data with no missing timestamps
+def test_fill_missing_timestamps_no_missing_timestamps():
+    # Arrange: create a DataFrame with with no missing timestamps
     times = pd.date_range('2023-01-01 00:00:00', periods=4, freq='1s')
     df = pd.DataFrame({'value': [1, 2, 3, 4]}, index=times)
+    sampling_freq = 1
 
-    result = pre_processing.fill_missing_timestamps(df, freq=1)
+    # Act : fill missing timestamps (nothing to do in this case)
+    result = pre_processing.fill_missing_timestamps(df, sampling_freq)
 
-    # Should be unchanged
+    # Assert: output should be equal to the input DataFrame
     pd.testing.assert_frame_equal(df, result)
 
-def test_negative_frequency():
-    # Test that negative frequency raises ValueError
+def test_fill_missing_timestamps_negative_frequency():
+    # Arrange: create a DataFrame with with no missing timestamps
     df = pd.DataFrame({'value': [1]}, index=[pd.to_datetime('2023-01-01')])
-    try:
-        pre_processing.fill_missing_timestamps(df, freq=-10)
-        assert False, "Expected ValueError"
-    except ValueError:
-        pass
+    sampling_freq = -1
 
-##### testing remove_beyond_threshold() #####
+    # Assert: 
+    with pytest.raises(ValueError, match="positive"):
+        pre_processing.fill_missing_timestamps(df, sampling_freq)
 
-def test_remove_beyond_threshold_basic():
-    array = np.array([1.0, 5.0, -7.0, 3.0, -10.0])
+#######################################################################
+################ testing remove_beyond_threshold() ####################
+#######################################################################
+
+def test_remove_beyond_threshold_regular_case():
+    # Arrange: create an array with values smaller and bigger than the threshold
     threshold = 6.0
+    array = np.array([1.0, 5.0, -7.0, 3.0, -10.0])
+    # Arrange: expected outputs
     expected_clean = np.array([1.0, 5.0, np.nan, 3.0, np.nan])
     expected_count = 2
 
+    # Act
     result_array, count = pre_processing.remove_beyond_threshold(array, threshold)
 
+    # Assert: count of the exceeding values is as expected
     assert count == expected_count, "Incorrect number of values replaced"
+    # Assert: replacement with NaNs executed in the correct places
     assert np.allclose(result_array[:2], expected_clean[:2], equal_nan=True)
     assert np.allclose(result_array[3], expected_clean[3], equal_nan=True)
+    # Assert: values under threshold are preserved
     assert np.isnan(result_array[2]) and np.isnan(result_array[4]), "Values beyond threshold not replaced with NaN"
 
 def test_remove_beyond_threshold_no_replacement():
-    array = np.array([1.0, 2.0, -2.5])
+    # Arrange: array with no values over threshold
     threshold = 5.0
+    array = np.array([1.0, 2.0, -2.5])
+
+    # Act:
     result_array, count = pre_processing.remove_beyond_threshold(array, threshold)
 
+    # Assert: `count` should be 0 and output array should remain unchanged
     assert count == 0, "No values should be replaced"
     assert np.array_equal(result_array, array), "Array should remain unchanged"
 
 def test_remove_beyond_threshold_all_replaced():
-    array = np.array([100.0, -200.0, 300.0])
+    # Arrange: array with all values over threshold
     threshold = 50.0
+    array = np.array([100.0, -200.0, 300.0])
+
+    # Act: all values should be replaced
     result_array, count = pre_processing.remove_beyond_threshold(array, threshold)
 
+    # Assert: `count` has to be equal to the length of the input array
     assert count == 3, "All values should be replaced"
+    # Assert: output array must contain all NaN values
     assert np.all(np.isnan(result_array)), "All values should be NaN"
 
 def test_remove_beyond_threshold_empty_array():
-    array = np.array([])
+    # Arrange: create empty array
     threshold = 10.0
+    array = np.array([])
+
+    # Act: no action expected
     result_array, count = pre_processing.remove_beyond_threshold(array, threshold)
 
+    # Assert: Empty array should result in zero replacements and 0 exceeding values counted
     assert count == 0, "Empty array should result in zero replacements"
     assert result_array.size == 0, "Result should be an empty array"
 
-##### testing pre_precessing.linear_interp() #####
+#######################################################################
+############## testing pre_precessing.linear_interp() #################
+#######################################################################
 
-def test_linear_interp():
-    result = pre_processing.linear_interp(0.0, 10.0, 5) # testing with valid values
+def test_linear_interp_regular_case():
+    # Arrange: valid inputs
+    left_value = 0.0
+    right_value = 10.0
+    length = 5
+    # Arrange: expected values
     expected = np.array([1.667, 3.333, 5.0, 6.667, 8.333])
+    
+    # Act: linear interpolate a number of `length` values between `left_value` and `right_value`
+    result = pre_processing.linear_interp(left_value, right_value, length)
+
+    # Assert: output is as expected
     np.testing.assert_almost_equal(result, expected, decimal=3)
 
-    result = pre_processing.linear_interp(5.0, 10.0, 1) # testing with length = 1
-    expected = np.array([7.5])
+def test_linear_interp_length_one():
+    # Arrange: valid inputs, unitary length
+    left_value = 5.0
+    right_value = 10.0
+    length = 1
+    # Arrange: expected value (the mean between left value and right value)
+    expected = np.array([(left_value+right_value)/2])
+
+    # Act:
+    result = pre_processing.linear_interp(left_value, right_value, length) # testing with length = 1
+
+    # Assert: output is as expected
     np.testing.assert_array_equal(result, expected)
 
-    result = pre_processing.linear_interp(5.0, 5.0, 5) # test with left_value == right_value
-    expected = np.array([5.0, 5.0, 5.0, 5.0, 5.0])
+def test_linear_interp_coincindent_left_right():
+    # Arrange: valid inputs, right_value == left_value
+    left_value = 5.0
+    right_value = left_value
+    length = 6
+    # Arrange: expected values
+    expected = np.full(length, left_value) # array with length == `length`, values all equal to left_value
+
+    # Act:
+    result = pre_processing.linear_interp(left_value, right_value, length)
+    
+    # Assert: output is as expected
     np.testing.assert_array_equal(result, expected)
 
+#######################################################################
+########### testing pre_processing.identify_interp_spikes() ###########
+#######################################################################
 
-##### testing pre_processing.identify_interp_spikes() #####
-
-def test_basic_interpolation():
+def test_identify_interp_spikes_one_spike():
+    # Arrange: spikes have to be of this length at maximum
+    max_length_spike = 2
+    # Arrange: array with one spike (two high values respect to the others)
     array = np.array([1.0, 2.0, 100.0, 200.0, 5.0])
+    # Arrange: a mask telling where the spikes are (in the main the mask is based on running_stats)
     mask = np.array([False, False, True, True, False])
-    expected = np.array([1.0, 2.0, 3.0, 4.0, 5.0])  # interp tra 2.0 e 5.0
-    max_length = 2
-    result, count = pre_processing.identify_interp_spikes(array.copy(), mask, max_length)
+    # Arrange: expected output, [2] and [3] are interpolated values between 2.0 and 5.0
+    expected = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
+    
+    # Act:
+    result, count = pre_processing.identify_interp_spikes(array.copy(), mask, max_length_spike)
+
+    # Assert: one spike replaced with interpolated values
     np.testing.assert_almost_equal(result, expected, decimal=3)
     assert count == 1
 
-def test_no_interpolation_if_too_long():
-    array = np.array([1.0, 2.0, 100.0, 200.0, 300.0, 5.0])
-    mask = np.array([False, False, True, True, True, False])
-    max_length = 2
-    expected = array.copy()
-    result, count = pre_processing.identify_interp_spikes(array.copy(), mask, max_length)
-    np.testing.assert_array_equal(result, expected)
-    assert count == 0
-
-def test_no_interpolation_on_boundary():
-    array = np.array([100.0, 200.0, 3.0, 4.0, 5.0])
-    mask = np.array([True, True, False, False, False])
-    max_length = 2
-    expected = array.copy()
-    result, count = pre_processing.identify_interp_spikes(array.copy(), mask, max_length)
-    np.testing.assert_array_equal(result, expected)
-    assert count == 0
-
-def test_multiple_spikes():
+def test_identify_interp_spikes_multiple_spikes():
+    # Arrange: spikes have to be of this length at maximum
+    max_length_spike = 2
+    # Arrange: array containing multiple valid spikes 
+    # (first spike's length: 1 < max_length, second spike of length 2 == max_length_spike)
     array = np.array([1.0, 2.0, 100.0, 200.0, 5.0, 6.0, 300.0, 7.0])
+    # Arrange: a mask telling where the spikes are (in the main the mask is based on running_stats)
     mask = np.array([False, False, True, True, False, False, True, False])
-    max_length = 2
+    # Arrange: expected output, 
+    # [2] and [3] are interpolated values between 2.0 and 5.0
+    # [6] is interpolated between 6 and 7
     expected = np.array([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 6.5, 7.0])
-    result, count = pre_processing.identify_interp_spikes(array.copy(), mask, max_length)
+
+    # Act:
+    result, count = pre_processing.identify_interp_spikes(array.copy(), mask, max_length_spike)
+
+    # Assert: two spikes replaced with interpolated values
     np.testing.assert_almost_equal(result, expected, decimal=3)
     assert count == 2
+
+def test_identify_interp_spikes_no_interpolation_if_too_long():
+    # Arrange: spikes have to be of this length at maximum
+    max_length_spike = 2
+    # Arrange: array with one spike exceeding length limit (3 > 2)
+    array = np.array([1.0, 2.0, 100.0, 200.0, 300.0, 5.0])
+    # Arrange: a mask telling where the spikes are (in the main the mask is based on running_stats)
+    mask = np.array([False, False, True, True, True, False])
+    # Arrange: expected output == input
+    expected = array.copy()
+
+    # Act:
+    result, count = pre_processing.identify_interp_spikes(array.copy(), mask, max_length_spike)
+
+    # Assert: no spike counted, input unchanged
+    np.testing.assert_array_equal(result, expected)
+    assert count == 0
+
+def test_identify_interp_spikes_no_interpolation_on_boundary():
+    # Arrange: spikes have to be of this length at maximum
+    max_length_spike = 2
+    # Arrange: array with spikes near the left edge
+    array = np.array([100.0, 200.0, 3.0, 4.0, 5.0])
+    # Arrange: a mask telling where the spikes are (in the main the mask is based on running_stats)
+    mask = np.array([True, True, False, False, False])
+    # Arrange: expected output == input
+    expected = array.copy()
+
+    # Act:
+    result, count = pre_processing.identify_interp_spikes(array.copy(), mask, max_length_spike)
+
+    # Assert: no spike counted, input unchanged
+    np.testing.assert_array_equal(result, expected)
+    assert count == 0
 
 ##### testing pre_processing.despiking_VM97() #####
 
