@@ -271,6 +271,38 @@ def test_identify_interp_spikes_no_interpolation_on_boundary():
     np.testing.assert_array_equal(result, expected)
     assert count == 0
 
+def test_identify_interp_spikes_errors():
+    # Arrange: prepare valid array and mask
+    array = np.array([1.0, 2.0, 3.0, 4.0])
+    mask_valid = np.array([False, True, False, False])
+    max_length_valid = 1
+
+    # Act & Assert: check ValueError is raised when array and mask have different lengths
+    mask_wrong_length = np.array([False, True])
+    with pytest.raises(ValueError, match="same length"):
+        pre_processing.identify_interp_spikes(array, mask_wrong_length, max_length_valid)
+
+    # Act & Assert: check ValueError is raised when mask is not boolean
+    mask_not_boolean = np.array([0, 1, 0, 0])
+    with pytest.raises(ValueError, match="boolean array"):
+        pre_processing.identify_interp_spikes(array, mask_not_boolean, max_length_valid)
+
+    # Act & Assert: check ValueError is raised for non-integer max_length_spike
+    max_length_invalid = 2.5
+    with pytest.raises(ValueError, match="positive integer"):
+        pre_processing.identify_interp_spikes(array, mask_valid, max_length_invalid)
+
+    # Act & Assert: check ValueError is raised for negative max_length_spike
+    max_length_invalid = -1
+    with pytest.raises(ValueError, match="positive integer"):
+        pre_processing.identify_interp_spikes(array, mask_valid, max_length_invalid)
+
+    # Act & Assert: check ValueError is raised for zero max_length_spike
+    max_length_invalid = 0
+    with pytest.raises(ValueError, match="positive integer"):
+        pre_processing.identify_interp_spikes(array, mask_valid, max_length_invalid)
+
+
 #######################################################################
 ############## testing pre_processing.despiking_VM97() ################
 #######################################################################

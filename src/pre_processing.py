@@ -139,13 +139,31 @@ def identify_interp_spikes(array: np.ndarray,
     tuple[np.ndarray, int]
         A tuple containing the modified array with interpolated spike values and the total count of detected spikes.
     
+    Raises
+    ------
+    ValueError
+        If `array` and `mask` do not have the same length.
+    ValueError
+        If `mask` is not a boolean array.
+    ValueError
+        If `max_length_spike` is not a positive integer.
+
     Notes
     -----
     - If either the left or right neighbor is missing (i.e., the spike is at
       the boundary), the spike is not interpolated.
     - Only sequences of True values that are smaller than or equal to `max_length_spike` are considered spikes.
-    
     """
+
+    # --- Input validation ---
+    if len(array) != len(mask):
+        raise ValueError("`array` and `mask` must have the same length.")
+    if mask.dtype != bool:
+        raise ValueError("`mask` must be a boolean array.")
+    if not isinstance(max_length_spike, int) or max_length_spike <= 0:
+        raise ValueError("`max_length_spike` must be a positive integer.")
+
+    # --- Spike detection and interpolation ---
     flag = False
     count_spike = 0
     for i in range(len(array)):
