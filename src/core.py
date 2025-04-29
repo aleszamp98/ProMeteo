@@ -184,7 +184,7 @@ def import_data(path : str) -> pd.DataFrame:
 
     Returns
     -------
-    data : pandas.DataFrame
+    data : pd.DataFrame
         DataFrame with the timestamp as the index (from the "Time" column) and columns ["u", "v", "w", "T_s"].
 
     Raises
