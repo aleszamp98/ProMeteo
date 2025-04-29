@@ -242,127 +242,208 @@ def test_identify_interp_spikes_no_interpolation_on_boundary():
     np.testing.assert_array_equal(result, expected)
     assert count == 0
 
-##### testing pre_processing.despiking_VM97() #####
+#######################################################################
+############## testing pre_processing.despiking_VM97() ################
+#######################################################################
 
-def test_no_spikes():
-    signal = np.ones(100)
-    result = pre_processing.despiking_VM97(signal,
-                            c=2.0, 
-                            window_length=5, 
-                            max_consecutive_spikes=3, 
-                            max_iterations=5, 
-                            logger=None)
-    np.testing.assert_array_equal(result, signal)
+def generate_normal_data_with_spikes(size: int,
+                                    spike_indices: list,
+                                    spike_value: float) -> np.ndarray:
+    """
+    Generate normally distributed data with injected spikes.
 
-def generate_data_with_spikes(size: int,
-                              spike_indices: list,
-                              spike_value: float) -> np.ndarray:
-    data = np.random.normal(loc=1, scale=1, size=size) # values normal distributed around mean=1, with std_dev=1
+    Parameters
+    ----------
+    size : int
+        Number of data points to generate.
+    spike_indices : list of int
+        Indices at which to insert spike values.
+    spike_value : float
+        The value to assign at the specified spike indices.
+
+    Returns
+    -------
+    data : np.ndarray
+        1D array of normally distributed data with injected spikes.
+        The normal distribution has mean=1 and standard deviation=1.
+    """
+    # Generate data from a normal distribution with mean=1 and std=1
+    data = np.random.normal(loc=1.0, scale=1.0, size=size)
+    
+    # Insert spikes at the specified indices
     for idx in spike_indices:
         data[idx] = spike_value
+
     return data
 
+def test_despiking_VM97_no_spikes():
+    # Arrange: flat signal with no spikes
+    signal = np.ones(100)
+    # Arrange: expected output == input (no changes expected)
+    expected = signal.copy()
 
-def test_despiking_removes_spikes():
-    # tests that the function removes peaks from a sequence with well-spaced peaks
-    size =1*60*60*1 # 1 Hz signal, duration: 1h => 3600 points
-    # spikes at 15 min, 30 min, 45 min after the start
-    spike_indices = [900, 1800, 2700]  # idices of the spikes
-    spike_value = 20  # Value possibly greater than the bounds: 1*3+1=5 (see after)
-    array = generate_data_with_spikes(size,
-                                      spike_indices,
-                                      spike_value)
+    # Act: run the despiking algorithm with default parameters
+    result = pre_processing.despiking_VM97(
+        signal,
+        c=2.0,
+        window_length=5,
+        max_consecutive_spikes=3,
+        max_iterations=5,
+        logger=None
+    )
+
+    # Assert: input unchanged, no spike removal
+    np.testing.assert_array_equal(result, expected)
+
+def test_despiking_VM97_regular_case():
+    # Arrange: 1 Hz signal, duration: 1 hour => 3600 points
+    size = 1 * 60 * 60 * 1
+    # Arrange: spikes at 15 min, 30 min, 45 min after the start
+    spike_indices = [900, 1800, 2700]
+    # Arrange: spike value set intentionally above expected threshold
+    spike_value = 20
+    # Arrange: generate signal with spikes
+    array = generate_normal_data_with_spikes(size, 
+                                             spike_indices, 
+                                             spike_value)
     
-    # input parameters for the data creation function
+    # Arrange: despiking parameters
     c = 3.0
-    window_length = 5*60+1 # (5min window length + 1 to obtain odd number of points)
+    window_length = 5 * 60 + 1  # 5-minute window, ensure odd number of points
     max_consecutive_spikes = 3
     max_iterations = 10
 
-    despiked_array = pre_processing.despiking_VM97(array,
-                                    c=c,
-                                    window_length=window_length,
-                                    max_consecutive_spikes=max_consecutive_spikes,
-                                    max_iterations=max_iterations,
-                                    logger=None)
-    
+    # Act: apply the despiking algorithm
+    despiked_array = pre_processing.despiking_VM97(
+        array,
+        c=c,
+        window_length=window_length,
+        max_consecutive_spikes=max_consecutive_spikes,
+        max_iterations=max_iterations,
+        logger=None
+    )
+
+    # Assert: spikes are removed (values well below threshold)
     for idx in spike_indices:
         assert abs(despiked_array[idx]) < 10, f"Spike at index {idx} was not removed: value {despiked_array[idx]}"
 
-def test_despiking_too_long_spikes():
+def test_despiking_VM97_spike_length_equal_max_spike_length():
+    # Arrange: 1 Hz signal, duration: 1 hour => 3600 points
+    size = 1 * 60 * 60 * 1
+    # Arrange: one single long spike of 3 consecutive points
+    spike_indices = [900, 901, 902]
+    # Arrange: spike value intentionally above detection threshold
+    spike_value = 20
+    # Arrange: generate signal with long spike
+    array = generate_normal_data_with_spikes(size, 
+                                             spike_indices, 
+                                             spike_value)
 
-    # tests if doesn't remove spikes that are longer than the parameter `max_consecutive_spikes`
-    size =1*60*60*1 # 1 Hz signal, duration: 1h => 3600 points
-    # unique long spike
-    spike_indices = [900, 901, 902]  # idices of the spikes
-    spike_value = 20  # Value possibly greater than the bounds: 1*3+1=5 (see after)
-    array = generate_data_with_spikes(size,
-                                      spike_indices,
-                                      spike_value)
+    # Arrange: despiking parameters with spike length equal to max allowed
     c = 3.0
-    window_length = 5*60+1 # (5min window length + 1 to obtain odd number of points)
+    window_length = 5 * 60 + 1
+    max_consecutive_spikes = 3
     max_iterations = 10
-    max_consecutive_spikes_1 = 3
-    despiked_array_1 = pre_processing.despiking_VM97(array,
-                                    c=c,
-                                    window_length=window_length,
-                                    max_consecutive_spikes=max_consecutive_spikes_1,
-                                    max_iterations=max_iterations,
-                                    logger=None)
+
+    # Act: apply despiking
+    despiked_array = pre_processing.despiking_VM97(
+        array,
+        c=c,
+        window_length=window_length,
+        max_consecutive_spikes=max_consecutive_spikes,
+        max_iterations=max_iterations,
+        logger=None
+    )
+
+    # Assert: spike is removed since length == max_consecutive_spikes
     for idx in spike_indices:
-        assert abs(despiked_array_1[idx]) < 10, f"Spike at index {idx} was not removed: value {despiked_array_1[idx]}"
+        assert abs(despiked_array[idx]) < 10, f"Spike at index {idx} was not removed: value {despiked_array[idx]}"
 
-    max_consecutive_spikes_2 = 2
-    despiked_array_2 = pre_processing.despiking_VM97(array,
-                                    c=c,
-                                    window_length=window_length,
-                                    max_consecutive_spikes=max_consecutive_spikes_2,
-                                    max_iterations=max_iterations,
-                                    logger=None)
+
+def test_despiking_VM97_too_long_spike():
+    # Arrange: 1 Hz signal, duration: 1 hour => 3600 points
+    size = 1 * 60 * 60 * 1
+    # Arrange: one single long spike of 3 consecutive points
+    spike_indices = [900, 901, 902]
+    # Arrange: spike value intentionally above detection threshold
+    spike_value = 20
+    # Arrange: generate signal with long spike
+    array = generate_normal_data_with_spikes(size, 
+                                             spike_indices, 
+                                             spike_value)
+
+    # Arrange: despiking parameters with spike length > max allowed
+    c = 3.0
+    window_length = 5 * 60 + 1
+    max_consecutive_spikes = 2
+    max_iterations = 10
+
+    # Act: apply despiking
+    despiked_array = pre_processing.despiking_VM97(
+        array,
+        c=c,
+        window_length=window_length,
+        max_consecutive_spikes=max_consecutive_spikes,
+        max_iterations=max_iterations,
+        logger=None
+    )
+
+    # Assert: spike remains untouched since it's too long to be removed
     for idx in spike_indices:
-        assert despiked_array_2[idx]==array[idx], f"Spike at index {idx} was removed even though it was longer than the 'max_consecutive_spikes' parameter "
+        assert despiked_array[idx] == array[idx], (
+            f"Spike at index {idx} was removed even though it was longer than "
+            f"the 'max_consecutive_spikes' parameter"
+        )
 
+def test_despiking_VM97_preserves_normal_values():
+    # Arrange: 1 Hz signal, duration: 1 hour => 3600 points
+    size = 1 * 60 * 60 * 1
+    # Arrange: no spikes in the input array
+    array = generate_normal_data_with_spikes(size, 
+                                             [], 
+                                             0)
 
-def test_despiking_preserves_normal_values():
-    # tests that the function doesn't remove non-spike values, 
-    size =1*60*60*1 # 1 Hz signal, duration: 1h => 3600 points
-    array = generate_data_with_spikes(size, [], 0) # no spikes
-    
-    # Parametri di input per la funzione
+    # Arrange: despiking parameters
     c = 5.0
     window_length = 5
     max_consecutive_spikes = 2
     max_iterations = 10
-    
-    # Esegui la funzione
-    despiked_array = pre_processing.despiking_VM97(array,
-                                    c=c,
-                                    window_length=window_length,
-                                    max_consecutive_spikes=max_consecutive_spikes,
-                                    max_iterations=max_iterations,
-                                    logger=None)
-    
+
+    # Act:
+    despiked_array = pre_processing.despiking_VM97(
+        array,
+        c=c,
+        window_length=window_length,
+        max_consecutive_spikes=max_consecutive_spikes,
+        max_iterations=max_iterations,
+        logger=None
+    )
+
+    # Assert: input unchanged since no spikes are present
     assert np.allclose(array, despiked_array, atol=1e-2), "Non-spike values incorrectly modified."
 
-def test_despiking_stops_on_max_iterations(monkeypatch):
-    # Falso array con spike che non scompariranno mai
+def test_despiking_VM97_stops_on_max_iterations(monkeypatch):
+    # Arrange: input array with a persistent spike
     input_array = np.array([1.0]*10 + [100.0] + [1.0]*10)
 
-    # Mock delle funzioni esterne
+    # Arrange: mock mean and std to force detection of a spike in every iteration
     def mock_running_stats(array, window_length):
-        mean = np.ones_like(array)  # media costante
-        std = np.ones_like(array)   # deviazione standard costante
+        mean = np.ones_like(array)
+        std = np.ones_like(array)
         return mean, std
 
+    # Arrange: mock spike identifier to always report a spike
     def mock_identify_interp_spikes(array, mask, max_consecutive_spikes):
-        return array, 1  # simula spike costanti, mai 0
+        return array, 1  # one spike per iteration
 
     monkeypatch.setattr(core, "running_stats", mock_running_stats)
     monkeypatch.setattr("pre_processing.identify_interp_spikes", mock_identify_interp_spikes)
 
+    # Arrange: mock logger to capture log calls
     mock_logger = MagicMock()
     max_iter = 3
 
+    # Act:
     _ = pre_processing.despiking_VM97(
         array_to_despike=input_array,
         c=2.0,
@@ -372,183 +453,283 @@ def test_despiking_stops_on_max_iterations(monkeypatch):
         logger=mock_logger
     )
 
-    # Verifica che il numero di iterazioni loggate corrisponda a max_iterations + 1
+    # Assert: logger recorded exactly max_iterations + 1 iterations (including 0)
     logged_iterations = [call for call in mock_logger.info.call_args_list if "Iteration" in str(call)]
-    assert len(logged_iterations) == max_iter + 1  # Iterazioni: 0, 1, ..., max_iter
+    assert len(logged_iterations) == max_iter + 1, "Did not stop after reaching max_iterations"
 
 
-def test_logger_usage(caplog):
-    # tests that the function removes peaks from a sequence with well-spaced peaks
-    size =1*60*60*1 # 1 Hz signal, duration: 1h => 3600 points
-    # spikes at 15 min, 30 min, 45 min after the start
-    spike_indices = [900, 1800, 2700]  # idices of the spikes
-    spike_value = 20  # Value possibly greater than the bounds: 1*3+1=5 (see after)
-    array = generate_data_with_spikes(size,
-                                      spike_indices,
-                                      spike_value)
-    
-    # input parameters for the data creation function
+def test_despiking_VM97_logger_usage(caplog):
+    # Arrange: 1 Hz signal, duration: 1 hour => 3600 points
+    size = 1 * 60 * 60 * 1
+    # Arrange: spikes inserted at 15, 30, and 45 minutes
+    spike_indices = [900, 1800, 2700]
+    spike_value = 20
+    array = generate_normal_data_with_spikes(size,
+                                             spike_indices,
+                                             spike_value)
+
+    # Arrange: despiking parameters
     c = 3.0
-    window_length = 5*60+1 # (5min window length + 1 to obtain odd number of points)
+    window_length = 5 * 60 + 1
     max_consecutive_spikes = 3
     max_iterations = 10
-    
-    # Esegui la funzione con il logger
+
+    # Act: capture logging output
     with caplog.at_level(logging.INFO):
-        pre_processing.despiking_VM97(array,
-                       c=c,
-                       window_length=window_length,
-                       max_consecutive_spikes=max_consecutive_spikes,
-                       max_iterations=max_iterations,
-                       logger=logging.getLogger())
-    
-    # Verifica che il logger abbia registrato informazioni sull'iterazione
-    assert "Iteration:" in caplog.text, "Logger did not record any string 'iteration'"
+        pre_processing.despiking_VM97(
+            array,
+            c=c,
+            window_length=window_length,
+            max_consecutive_spikes=max_consecutive_spikes,
+            max_iterations=max_iterations,
+            logger=logging.getLogger()
+        )
 
-##### testing pre_processing.despiking_robust() #####
+    # Assert: log includes information about iterations
+    assert "Iteration:" in caplog.text, "Logger did not record any string 'Iteration:'"
 
-def generate_data_with_spikes_despiking_robust(size: int,
-                              spike_indices: list,
-                              spike_value: float) -> np.ndarray:
-    data = np.random.uniform(0, 100, size=size) 
-    # an array for which the median and the percentiles are easy to compute:
-    # median=50, p16=16, p84=84
+#######################################################################
+########### testing pre_processing.despiking_robust() #################
+#######################################################################
+
+def generate_uniform_data_with_spikes(size: int,
+                                      spike_indices: list,
+                                      spike_value: float) -> np.ndarray:
+    """
+    Generate uniformly distributed data with artificial spikes, 
+    designed for testing robust despiking methods.
+
+    Parameters
+    ----------
+    size : int
+        Number of data points to generate.
+    spike_indices : list of int
+        Indices at which to insert spike values.
+    spike_value : float
+        The value to assign at the specified spike indices.
+
+    Returns
+    -------
+    data : np.ndarray
+        1D array of uniformly distributed data with injected spikes.
+        The uniform distribution is over the interval [0, 100], 
+        so the theoretical median is 50, and the 16th and 84th 
+        percentiles are approximately 16 and 84, respectively.
+    """
+    # Generate data from a uniform distribution in [0, 100]
+    data = np.random.uniform(low=0.0, high=100.0, size=size)
+
+    # Insert spikes at the specified indices
     for idx in spike_indices:
         data[idx] = spike_value
+
     return data
 
-def test_no_spikes_robust():
+def test_despiking_robust_no_spikes():
+    # Arrange: flat signal with no spikes
     signal = np.ones(100)
-    result, _ = pre_processing.despiking_robust(signal,
-                                             c=2.0,
-                                             window_length=5)
+
+    # Act:
+    result, _ = pre_processing.despiking_robust(
+        signal,
+        c=2.0,
+        window_length=5
+    )
+
+    # Assert: unchanged signal
     np.testing.assert_array_equal(result, signal)
 
-def test_despiking_removes_spikes_robust():
-    size = 1 * 60 * 60 * 1  # 1 Hz signal, duration: 1h => 3600 points
-    spike_indices = [900, 1800, 2700]  # spikes indices 15 min, 30 min, 45 min)
-    spike_value = 200  # has to be greater than the [mean + c*(p84-p16)/2] = 50 + 3*[(84-16)/2] = 152
-    array = generate_data_with_spikes_despiking_robust(size,
-                                                       spike_indices,
-                                                       spike_value)
-    
-    c = 3  # Parametro c per la funzione
+
+def test_despiking_robust_regular_case():
+    # Arrange: 1 Hz signal, 1 hour duration => 3600 points
+    size = 1 * 60 * 60 * 1
+    spike_indices = [900, 1800, 2700]  # 15, 30, 45 min
+    spike_value = 200  # well above threshold
+
+    # Arrange: generate data with known spikes
+    array = generate_uniform_data_with_spikes(size,
+                                              spike_indices,
+                                              spike_value)
+
+    c = 3
     window_length = 5 * 60 + 1
-    
-    despiked_array, count_spike = pre_processing.despiking_robust(array,
-                                                                  c=c,
-                                                                  window_length=window_length)
-    
-    # compute the running median
-    running_median, _ = core.running_stats_robust(array,
-                                                  window_length)
 
-    for idx in spike_indices: # verifies if the spikes were removed: sobstituted with 
-        assert despiked_array[idx] == running_median[idx], f"Spike at index {idx} was not removed: value {despiked_array[idx]}"
-    
-    # verifies if the number of values modified is correct
-    assert count_spike == len(spike_indices), f"Expected {len(spike_indices)} spikes, but got {count_spike}"
+    # Act:
+    despiked_array, count_spike = pre_processing.despiking_robust(
+        array,
+        c=c,
+        window_length=window_length
+    )
+
+    # Arrange: compute reference median values
+    running_median, _ = core.running_stats_robust(array, window_length)
+
+    # Assert: spikes were replaced with median values
+    for idx in spike_indices:
+        assert despiked_array[idx] == running_median[idx], (
+            f"Spike at index {idx} was not removed: value {despiked_array[idx]}"
+        )
+
+    # Assert: correct number of spikes identified
+    assert count_spike == len(spike_indices), (
+        f"Expected {len(spike_indices)} spikes, but got {count_spike}"
+    )
 
 
-def test_despiking_preserves_normal_values_robust():
-    size = 1 * 60 * 60 * 1  # 1h=3600 points
-    array = np.random.normal(loc=1, scale=1, size=size)  # without spikes
-    
-    c = 5.0 
+def test_despiking_robust_preserves_normal_values():
+    # Arrange: normal-distributed signal with no spikes
+    # Arrange: 1 Hz signal, duration: 1 hour => 3600 points
+    size = 1 * 60 * 60 * 1
+    # Arrange: no spikes in the input array
+    array = generate_normal_data_with_spikes(size, 
+                                             [], 
+                                             0)
+
+    c = 5.0
     window_length = 5
-    
-    despiked_array, _ = pre_processing.despiking_robust(array,
-                                                                  c=c,
-                                                                  window_length=window_length)
-    
-    np.testing.assert_array_equal(array,
-                                  despiked_array,
-                                  err_msg="Non-spike values incorrectly modified.")
-    
-##### testing pre_processing.interp_nan() #####
 
-def test_no_nans():
+    # Act:
+    despiked_array, _ = pre_processing.despiking_robust(
+        array,
+        c=c,
+        window_length=window_length
+    )
+
+    # Assert: values preserved (within float equality)
+    np.testing.assert_array_equal(
+        array,
+        despiked_array,
+        err_msg="Non-spike values incorrectly modified."
+    )
+
+#######################################################################
+################ testing pre_processing.interp_nan() ##################
+#######################################################################
+
+def test_interp_nan_no_nans():
+    # Arrange: input array with no NaNs
     array = np.array([1.0, 2.0, 3.0])
+
+    # Act:
     result, count = pre_processing.interp_nan(array)
+
+    # Assert: no changes, no NaNs
     np.testing.assert_array_equal(result, array)
     assert count == 0
 
-def test_single_nan():
+
+def test_interp_nan_single_nan():
+    # Arrange: input array with a single NaN value
     array = np.array([1.0, np.nan, 3.0])
     expected = np.array([1.0, 2.0, 3.0])
+
+    # Act:
     result, count = pre_processing.interp_nan(array)
+
+    # Assert: NaN interpolated correctly
     np.testing.assert_allclose(result, expected)
     assert count == 1
 
-def test_multiple_nans():
+
+def test_interp_nan_multiple_nans():
+    # Arrange: input array with multiple consecutive NaN values
     array = np.array([1.0, np.nan, np.nan, 4.0])
     expected = np.array([1.0, 2.0, 3.0, 4.0])
+
+    # Act:
     result, count = pre_processing.interp_nan(array)
+
+    # Assert: NaNs interpolated correctly
     np.testing.assert_allclose(result, expected)
     assert count == 2
 
-def test_nan_at_edges():
+
+def test_interp_nan_nan_at_edges():
+    # Arrange: input array with NaNs at the edges
     array = np.array([np.nan, 1.0, 2.0, np.nan])
     expected = np.array([np.nan, 1.0, 2.0, np.nan])
+
+    # Act:
     result, count = pre_processing.interp_nan(array)
+
+    # Assert: no interpolation at edges (NaNs remain)
     np.testing.assert_array_equal(result, expected)
     assert count == 0
 
-def test_all_nans():
+
+def test_interp_nan_all_nans():
+    # Arrange: input array with all NaN values
     array = np.array([np.nan, np.nan])
     expected = np.array([np.nan, np.nan])
+
+    # Act:
     result, count = pre_processing.interp_nan(array)
+
+    # Assert: all NaNs remain (cannot interpolate all NaNs)
     np.testing.assert_array_equal(result, expected)
     assert count == 0
 
-
-##### testing pre_processing.rotation_to_LEC_reference() #####
+#######################################################################
+######### testing pre_processing.rotation_to_LEC_reference() ##########
+#######################################################################
 
 def test_rotation_to_LEC_reference_shape_mismatch_error():
-    # Test that a ValueError is raised if the input shape is incorrect (wrong first dimension).
-    # Wind has wrong first dimension (2 instead of 3)
+    # Arrange: input with wrong shape for wind (2 instead of 3)
     wind = np.array([
         [1, 2, 3, 4],
         [0, 0, 0, 0],
     ])
     azimuth = 0
     model = "RM_YOUNG_81000"
-    with pytest.raises(ValueError, match="must have shape"):
-        pre_processing.rotation_to_LEC_reference(wind,
-                                                 azimuth,
-                                                 model)
 
-def test_invalid_azimuth():
+    # Act & Assert: check that ValueError is raised
+    with pytest.raises(ValueError, match="must have shape"):
+        pre_processing.rotation_to_LEC_reference(wind, azimuth, model)
+
+
+def test_rotation_to_LEC_reference_invalid_azimuth():
+    # Arrange: wind array with valid shape
     wind = np.zeros((3, 10))
-    # lower than 0
+
+    # Act & Assert: azimuth < 0
+    # check that ValueError is raised
     azimuth = -10
     model = "RM_YOUNG_81000"
     with pytest.raises(ValueError, match="azimuth is outside the range"):
         pre_processing.rotation_to_LEC_reference(wind, azimuth, model)
-    # higher than 360
+
+    # Act & Assert: azimuth > 360
+    # check that ValueError is raised
     azimuth = 400
     model = "CAMPBELL_CSAT3"
     with pytest.raises(ValueError, match="azimuth is outside the range"):
         pre_processing.rotation_to_LEC_reference(wind, azimuth, model)
 
-def test_invalid_model():
+def test_rotation_to_LEC_reference_invalid_model():
+    # Arrange: valid wind array and azimuth, invalid model
     wind = np.zeros((3, 10))
     azimuth = 0
     model = "BEST_ANEMOMETER_EVER"
+
+    # Act & Assert: check that ValueError is raised for unknown model
     with pytest.raises(ValueError, match="Unknown model"):
         pre_processing.rotation_to_LEC_reference(wind, azimuth, model)
 
-def test_rotation_RM_YOUNG_81000_azimuth_zero():
+
+def test_rotation_to_LEC_reference_RM_YOUNG_81000_azimuth_zero():
+    # Arrange: input wind and azimuth
     wind = np.array([
-        [ 2, -2,  2,  2],
-        [ 3,  3, -3,  3],
-        [ 4,  4,  4, -4]
+        [2, -2, 2, 2],
+        [3, 3, -3, 3],
+        [4, 4, 4, -4]
     ])
     azimuth = 0
     model = "RM_YOUNG_81000"
     
+    # Act: perform rotation
     result = pre_processing.rotation_to_LEC_reference(wind, azimuth, model)
 
+    # Assert: expected result after rotation
     expected = np.array([
         -wind[0,:],  # x component inverted
         -wind[1,:],  # y component inverted
@@ -556,71 +737,80 @@ def test_rotation_RM_YOUNG_81000_azimuth_zero():
     ])
     np.testing.assert_array_equal(result, expected, err_msg="Something wrong...")
 
-def test_rotation_CAMPBELL_CSAT3_azimuth_zero():
+def test_rotation_to_LEC_reference_CAMPBELL_CSAT3_azimuth_zero():
+    # Arrange: input wind and azimuth
     wind = np.array([
-        [ 2, -2,  2,  2],
-        [ 3,  3, -3,  3],
-        [ 4,  4,  4, -4]
+        [2, -2, 2, 2],
+        [3, 3, -3, 3],
+        [4, 4, 4, -4]
     ])
     azimuth = 0
     model = "CAMPBELL_CSAT3"
     
+    # Act: perform rotation
     result = pre_processing.rotation_to_LEC_reference(wind, azimuth, model)
     
+    # Assert: expected result after rotation
     expected = np.array([
          wind[1,:],   # new x = old y
-        -wind[0,:],   # new y = -old x
+        -wind[0,:],   # new y =-old x
          wind[2,:]    # z component unchanged
     ])
     
     np.testing.assert_array_equal(result, expected, err_msg="Something wrong...")
 
-
-def test_rotation_RM_YOUNG_81000_with_azimuth():
+def test_rotation_to_LEC_reference_RM_YOUNG_81000_with_azimuth():
+    # Arrange: input wind and azimuth
     wind = np.array([
-        [ 2, -2,  2,  2],
-        [ 3,  3, -3,  3],
-        [ 4,  4,  4, -4]
+        [2, -2, 2, 2],
+        [3, 3, -3, 3],
+        [4, 4, 4, -4]
     ])
     azimuth = 43
     model = "RM_YOUNG_81000"
     
+    # Act: perform rotation with azimuth
     result = pre_processing.rotation_to_LEC_reference(wind, azimuth, model)
 
-    # rotation matrix definition
-    azimuth = np.deg2rad(azimuth) # degree to radians conversion
+    # Rotation matrix for azimuth
+    azimuth_rad = np.deg2rad(azimuth)
     rot_azimuth = np.zeros((3,3))
-    rot_azimuth[0, 0] =  np.cos(azimuth) # input have to be angles in radians
-    rot_azimuth[0, 1] =  np.sin(azimuth)
-    rot_azimuth[1, 0] = -np.sin(azimuth)
-    rot_azimuth[1, 1] =  np.cos(azimuth)
+    rot_azimuth[0, 0] =  np.cos(azimuth_rad)
+    rot_azimuth[0, 1] =  np.sin(azimuth_rad)
+    rot_azimuth[1, 0] = -np.sin(azimuth_rad)
+    rot_azimuth[1, 1] =  np.cos(azimuth_rad)
     rot_azimuth[2, 2] =  1
 
     wind_LEC = np.array([
         -wind[0,:],  # x component inverted
         -wind[1,:],  # y component inverted
-         wind[2,:]  # z component unchanged
+         wind[2,:]   # z component unchanged
     ])
     expected = rot_azimuth @ wind_LEC
+    
+    # Assert: the result is close to the expected
     np.testing.assert_almost_equal(result, expected, decimal=4, err_msg="Something wrong...")
 
-def test_rotation_CAMPBELL_CSAT3_with_azimuth():
+def test_rotation_to_LEC_reference_CAMPBELL_CSAT3_with_azimuth():
+    # Arrange: input wind and azimuth
     wind = np.array([
-        [ 2, -2,  2,  2],
-        [ 3,  3, -3,  3],
-        [ 4,  4,  4, -4]
+        [2, -2, 2, 2],
+        [3, 3, -3, 3],
+        [4, 4, 4, -4]
     ])
     azimuth = 276
     model = "CAMPBELL_CSAT3"
     
+    # Act: perform rotation with azimuth
     result = pre_processing.rotation_to_LEC_reference(wind, azimuth, model)
     
-    azimuth = np.deg2rad(azimuth) # degree to radians conversion
+    # Rotation matrix for azimuth
+    azimuth_rad = np.deg2rad(azimuth)
     rot_azimuth = np.zeros((3,3))
-    rot_azimuth[0, 0] =  np.cos(azimuth) # input have to be angles in radians
-    rot_azimuth[0, 1] =  np.sin(azimuth)
-    rot_azimuth[1, 0] = -np.sin(azimuth)
-    rot_azimuth[1, 1] =  np.cos(azimuth)
+    rot_azimuth[0, 0] =  np.cos(azimuth_rad)
+    rot_azimuth[0, 1] =  np.sin(azimuth_rad)
+    rot_azimuth[1, 0] = -np.sin(azimuth_rad)
+    rot_azimuth[1, 1] =  np.cos(azimuth_rad)
     rot_azimuth[2, 2] =  1
 
     wind_LEC = np.array([
@@ -628,39 +818,37 @@ def test_rotation_CAMPBELL_CSAT3_with_azimuth():
         -wind[0,:],   # new y = -old x
          wind[2,:]    # z component unchanged
     ])
-
     expected = rot_azimuth @ wind_LEC
     
+    # Assert: the result is close to the expected
     np.testing.assert_array_equal(result, expected, err_msg="Something wrong...")
 
-##### testing pre_processing.rotation_to_streamline_reference() #####
+#######################################################################
+###### testing pre_processing.rotation_to_streamline_reference() ######
+#######################################################################
 
-def test_basic_rotation():
-    # test a case where no rotation should be applied
-    # Wind aligned with the x-axis
+def test_rotation_to_streamline_reference_no_rotation():
+    # Arrange: Wind aligned with the x-axis, no rotation expected
     wind = np.array([
         [1, 2, 3, 4],  # u component
         [0, 0, 0, 0],  # v component
         [0, 0, 0, 0],  # w component
     ])
-    # in order to have no rotation: azimuth angle and elevation angle have to be zero
-    # theta = np.arctan2(v_averaged, u_averaged)  # azimuth angle
-    # phi = np.arctan2(w_averaged, s)             # elevation angle
-    # so: v_averaged and w_averaged have to be zero
     wind_averaged = np.array([
         [1, 2, 3, 4],  # mean u component
         [0, 0, 0, 0],  # mean v component
         [0, 0, 0, 0],  # mean w component
     ])
 
+    # Act: Perform rotation (no rotation expected)
     wind_rotated = pre_processing.rotation_to_streamline_reference(wind, wind_averaged)
 
-    # Expect no rotation
+    # Assert: The result should match the original wind array
     np.testing.assert_allclose(wind_rotated, wind, atol=1e-8)
 
-def test_shape_mismatch_error():
-    # Test that a ValueError is raised if the input shape is incorrect (wrong first dimension).
-    # Wind has wrong first dimension (2 instead of 3)
+
+def test_rotation_to_streamline_reference_shape_mismatch_error():
+    # Arrange: Wind with incorrect shape (wrong first dimension)
     wind = np.array([
         [1, 2, 3, 4],
         [0, 0, 0, 0],
@@ -671,12 +859,12 @@ def test_shape_mismatch_error():
         [0, 0, 0, 0],
     ])
 
+    # Act & Assert: Check that ValueError is raised for incorrect shape
     with pytest.raises(ValueError, match="must have shape"):
         pre_processing.rotation_to_streamline_reference(wind, wind_averaged)
 
-def test_column_mismatch_error():
-    # Test that a ValueError is raised if the number of columns does not match.
-    # Wind has 4 columns, wind_averaged has 5 columns
+def test_rotation_to_streamline_reference_column_mismatch_error():
+    # Arrange: Wind with 4 columns, wind_averaged with 5 columns
     wind = np.array([
         [1, 2, 3, 4],
         [0, 0, 0, 0],
@@ -688,11 +876,12 @@ def test_column_mismatch_error():
         [0, 0, 0, 0, 0],
     ])
 
+    # Act & Assert: Check that ValueError is raised for column mismatch
     with pytest.raises(ValueError, match="same number of columns"):
         pre_processing.rotation_to_streamline_reference(wind, wind_averaged)
 
-def test_output_shape():
-    # Test that the output has the correct shape (3, 4).
+def test_rotation_to_streamline_reference_output_shape():
+    # Arrange: Wind array and averaged wind array
     wind = np.array([
         [1, 2, 3, 4],
         [0, 1, 0, 1],
@@ -704,41 +893,19 @@ def test_output_shape():
         [0, 0, 0, 0],
     ])
 
+    # Act: Perform rotation
     wind_rotated = pre_processing.rotation_to_streamline_reference(wind, wind_averaged)
 
+    # Assert: Check that the output has the expected shape
     assert wind_rotated.shape == (3, 4)
 
-# def test_rotation_with_vertical_wind():
-#     # Test a case where the mean wind is purely vertical. (?)
-#     # Wind is purely vertical at first sample
-#     wind = np.array([
-#         [0, 0, 0, 0],
-#         [0, 0, 0, 0],
-#         [1, 0, 0, 0],
-#     ])
-#     wind_averaged = np.array([
-#         [0, 1, 1, 1],
-#         [0, 0, 0, 0],
-#         [1, 0, 0, 0],
-#     ])
-
-#     wind_rotated = pre_processing.rotation_to_streamline_reference(wind, wind_averaged)
-
-#     # The rotated x-component of the first sample should be 1
-#     np.testing.assert_allclose(wind_rotated[0, 0], 1.0, atol=1e-8)
-
-def test_rotation_with_wind_along_y():
-    # Test a case where the wind has to be rotated from the y-axis to the x-axis
-
-    # Wind is purely along the y-axis: (0, v, 0) for each sample
+def test_rotation_to_streamline_reference_wind_along_y():
+    # Arrange: Wind purely along the y-axis: (0, v, 0) for each sample
     wind = np.array([
-        [0, 0, 0, 0],  # u component
-        [1, 2, 3, 4],  # v component (non-zero along y-axis)
-        [0, 0, 0, 0],  # w component
+        [0, 0, 0, 0],  # u component (no wind in the x direction)
+        [1, 2, 3, 4],  # v component (wind aligned along the y-axis)
+        [0, 0, 0, 0],  # w component (no vertical wind)
     ])
-
-    # theta = np.arctan2(v_averaged, u_averaged)  # azimuth angle
-    # phi = np.arctan2(w_averaged, s)             # elevation angle
 
     # Averaged wind is purely horizontal along y (same for each sample)
     wind_averaged = np.array([
@@ -747,70 +914,85 @@ def test_rotation_with_wind_along_y():
         [0, 0, 0, 0],  # mean w component (no vertical wind)
     ])
 
-    wind_rotated = pre_processing.rotation_to_streamline_reference(wind,
-                                                                   wind_averaged)
+    # Act: Perform rotation to streamline reference
+    wind_rotated = pre_processing.rotation_to_streamline_reference(wind, wind_averaged)
 
-    # After rotation, the x component should match the v component in magnitude
+    # Assert: After rotation, the x component should match the v component in magnitude
     np.testing.assert_allclose(wind_rotated[0, :], wind_averaged[1, :], atol=1e-8)
     
     # The y and z components should be zero
     np.testing.assert_allclose(wind_rotated[1, :], 0, atol=1e-8)
     np.testing.assert_allclose(wind_rotated[2, :], 0, atol=1e-8)
 
-
-# devo controllare che la media di v e w del vettore ruotato
-# in un contesto reale, cioè in cui il vento medio è effettivamente la media del vento in input
-# sia 0 (che è il senso della rotazione streamline)
-
-def test_rotation_to_streamline_reference():
-    # build a fake wind signal at 1 Hz
-    # every 10 mins the wind changes direction => each segment in which the wind is constant has length 10*60 points
-    # From North, from N-E, from E, etc with angle differences of 45 degrees between segments
+def test_rotation_to_streamline_reference_mean_v_nullified():
+    # Build a fake wind signal at 1 Hz
+    # Every 10 minutes the wind changes direction => each segment in which the wind is constant has length 10*60 points
+    # From North, from N-E, from E, etc. with angle differences of 45 degrees between segments
     # 8 directions => 8*10min = 8*10*60 points
     
+    # Define base wind components (u, v, w) for the 8 wind directions (N, NE, E, SE, S, SW, W, NW)
     u_base = [ 0, -1/np.sqrt(2), -1, -1/np.sqrt(2), 0,
             1/np.sqrt(2), 1,  1/np.sqrt(2)]
     v_base = [-1, -1/np.sqrt(2),  0,  1/np.sqrt(2), 1, 
             1/np.sqrt(2), 0, -1/np.sqrt(2)]
     w_base = [0, 0, 0, 0, 0,
                 0, 0, 0]
+    
+    # Length of each segment (15 minutes)
     length_single = 15 * 60
 
+    # Create the wind signal by repeating the base wind components for each segment
     wind = np.array([np.repeat(u_base, length_single),
                         np.repeat(v_base, length_single),
                         np.repeat(w_base, length_single)])
-    wind_averaged = np.full(wind.shape, 0.0)
-    window_length = 5*60 + 1 # 5 min window, odd number of points
-    for i in range(3):
-        wind_averaged[i,:],_ = core.running_stats(wind[i,:],window_length)
 
+    # Initialize the averaged wind signal with zeros
+    wind_averaged = np.full(wind.shape, 0.0)
+    
+    # Define the window length for averaging (5 minutes + 1 for odd number of points)
+    window_length = 5*60 + 1  # 5 minute window, odd number of points
+    
+    # Calculate the running averages for each component (u, v, w)
+    for i in range(3):
+        wind_averaged[i,:], _ = core.running_stats(wind[i,:], window_length)
+
+    # Rotate the wind signal to the streamline reference using the averaged wind
     wind_rotated_result = pre_processing.rotation_to_streamline_reference(wind,
                                                                             wind_averaged)
-    v_rotated_result_averaged,_ = core.running_stats(wind_rotated_result[1,:],
+
+    # Calculate the running average of the rotated v component (y direction)
+    v_rotated_result_averaged, _ = core.running_stats(wind_rotated_result[1,:],
                                                     window_length)
 
+    # Define the minutes where we want to check the results (5 minutes intervals)
+    start_minutes = [5, 20, 35, 50, 65, 80, 95, 110]  # start minutes
 
+    # Create an index list to control the points for each 5-minute interval
     index_list_to_control = []
-    start_minutes = [5, 20, 35, 50, 65, 80, 95, 110]  # minuti di partenza
-
     for start_min in start_minutes:
         start_idx = start_min * 60
-        end_idx = (start_min + 5) * 60  # 5 minuti dopo
+        end_idx = (start_min + 5) * 60  # 5 minutes later
         index_list_to_control.append(np.arange(start_idx, end_idx + 1, 1))
 
-    # Definiamo la soglia
-    threshold = 1e-5  # o qualsiasi altro valore tu voglia
+    # Define the threshold to consider as significant
+    threshold = 1e-5  # or any other value you prefer
 
-    # Mettiamo tutti gli indici da controllare in un unico array
+    # Flatten all indices to check into a single array
     indices_to_check = np.concatenate(index_list_to_control)
 
-    # Troviamo i punti che superano il threshold
+    # Create a mask for the points that exceed the threshold
     mask_over_threshold = np.abs(v_rotated_result_averaged[indices_to_check]) > threshold
 
-    # Gli indici reali dei punti sopra soglia
+    # Find the actual indices of points above the threshold
     bad_indices = indices_to_check[mask_over_threshold]
     bad_values = v_rotated_result_averaged[bad_indices]
 
+    # Comment explaining the rationale:
+    # I want to check that the running average of the wind along the y-direction in the rotated series is zero 
+    # at the time points where the initial (non-rotated) wind is sufficiently constant. This check is done 
+    # between the 5th and 10th minute after the wind direction change, when the wind is stable.
+
+    # If any points exceed the threshold, raise an error with details
     if bad_indices.size > 0:
         error_message = (
             f"Found {bad_indices.size} points exceeding the threshold {threshold}.\n"
@@ -821,157 +1003,177 @@ def test_rotation_to_streamline_reference():
             bad_indices.size, 0,
             err_msg=error_message
         )
-    
-##### testing pre_processing.wind_dir_LEC_reference() #####
 
-def test_wind_direction_scalar():
+#######################################################################
+########### testing pre_processing.wind_dir_LEC_reference() ###########
+#######################################################################
+
+def test_wind_dir_LEC_reference_regular_case_scalar():
+    # Arrange: define the u and v components of the wind vector
     u = 10
     v = 10
+    
+    # Act: compute the wind direction
     result = pre_processing.wind_dir_LEC_reference(u, v)
-    expected = 225  # 270-45 o 180+45, wind from S-W
+    expected = 225  # 270-45 or 180+45, wind from S-W
+    
+    # Assert: wind direction is correct
     assert np.isclose(result, expected, rtol=1e-5)
 
-def test_shape_mismatch():
-    u = np.array([1, 2, 3])
-    v = np.array([1, 2])
-    with pytest.raises(ValueError, match="Shape mismatch"):
-        pre_processing.wind_dir_LEC_reference(u, v)
-
-def test_wind_dir_LEC_reference_negative_threshold():
-    u = [0]
-    v = [1]
-    threshold = -2
-
-    with pytest.raises(ValueError, match="positive"):
-        pre_processing.wind_dir_LEC_reference(u, v, threshold)
-
-def test_wind_directions():
+def test_wind_dir_LEC_reference_regular_case_array():
+    # Arrange: define u and v components of wind vectors and the expected wind directions
     u = [ 0, -1/np.sqrt(2), -1, -1/np.sqrt(2), 0,
           1/np.sqrt(2), 1,  1/np.sqrt(2)]
     v = [-1, -1/np.sqrt(2),  0,  1/np.sqrt(2), 1, 
           1/np.sqrt(2), 0, -1/np.sqrt(2)]
     wind_dir_expected = [0, 45, 90, 135, 180, 225, 270, 315]
 
+    # Act: compute the wind directions
     result = pre_processing.wind_dir_LEC_reference(u, v)
+    
+    # Assert: the computed wind directions match the expected values
     np.testing.assert_allclose(result, wind_dir_expected, rtol=1e-5)
 
+
+def test_wind_dir_LEC_reference_shape_mismatch():
+    # Arrange: define u and v with mismatched shapes
+    u = np.array([1, 2, 3])
+    v = np.array([1, 2])
+    
+    # Act & Assert: expect a ValueError due to shape mismatch
+    with pytest.raises(ValueError, match="Shape mismatch"):
+        pre_processing.wind_dir_LEC_reference(u, v)
+
+def test_wind_dir_LEC_reference_negative_threshold():
+    # Arrange: define u, v, and a negative threshold
+    u = [0]
+    v = [1]
+    threshold = -2
+
+    # Act & Assert: expect a ValueError due to the negative threshold
+    with pytest.raises(ValueError, match="positive"):
+        pre_processing.wind_dir_LEC_reference(u, v, threshold)
+
 def test_wind_dir_LEC_reference_threshold():
-    # Dati di esempio
+    # Arrange: define u, v and threshold for low wind speeds
     u = np.array([0.01, 1.0])
     v = np.array([0.01, 0.0])
     threshold = 0.1
 
+    # Act: compute the wind direction considering the threshold
     result = pre_processing.wind_dir_LEC_reference(u, v, threshold=threshold)
 
+    # Assert: check that low wind speed results in NaN, and that the second result is close to 270 degrees
     assert np.isnan(result[0]), f"Expected NaN for low wind speed, got {result[0]}"
     assert np.isclose(result[1], 270.0, atol=1e-2), f"Expected ~90 degrees, got {result[1]}"
 
+#######################################################################
+##### testing pre_processing.wind_dir_modeldependent_reference() ######
+#######################################################################
 
-##### testing pre_processing.wind_dir_modeldependent_reference() #####
-
-def test_wind_direction_scalar_modeldependent():
+def test_wind_dir_modeldependent_reference_scalar():
+    # Arrange: define u, v components of wind and azimuth angle
     u = 10
     v = 10
     azimuth = 0.0
 
-    # Test per modello RM_YOUNG_81000
+    # Act & Assert: Test for RM_YOUNG_81000 model
     result_rm = pre_processing.wind_dir_modeldependent_reference(u, v, azimuth, model="RM_YOUNG_81000")
     expected_rm = 45  # inverts u and v, so from NE
     assert np.isclose(result_rm, expected_rm, rtol=1e-5)
 
-    # Test per modello CAMPBELL_CSAT3
+    # Act & Assert: Test for CAMPBELL_CSAT3 model
     result_cs = pre_processing.wind_dir_modeldependent_reference(u, v, azimuth, model="CAMPBELL_CSAT3")
-    expected_cs = 315.0  # perché v_LEC = -10, u_LEC = 10 => (-10, 10) -> 315°
+    expected_cs = 315.0  # because v_LEC = -10, u_LEC = 10 => (-10, 10) -> 315°
     assert np.isclose(result_cs, expected_cs, rtol=1e-5)
 
-def test_shape_mismatch_modeldependent():
+def test_wind_dir_modeldependent_reference_shape_mismatch():
+    # Arrange: define u and v with mismatched shapes
     u = np.array([1, 2, 3])
     v = np.array([1, 2])
     azimuth = 0.0
 
+    # Act & Assert: expect a ValueError due to shape mismatch
     with pytest.raises(ValueError, match="Shape mismatch"):
         pre_processing.wind_dir_modeldependent_reference(u, v, azimuth, model="RM_YOUNG_81000")
 
-def test_unknown_model():
+def test_wind_dir_modeldependent_reference_unknown_model():
+    # Arrange: define u, v components and azimuth
     u = [0]
     v = [1]
     azimuth = 0.0
 
+    # Act & Assert: expect a ValueError due to unknown model
     with pytest.raises(ValueError, match="Unknown model"):
         pre_processing.wind_dir_modeldependent_reference(u, v, azimuth, model="UNKNOWN_MODEL")
 
 def test_wind_dir_modeldependent_reference_negative_threshold():
+    # Arrange: define u, v components, azimuth, and a negative threshold
     u = [0]
     v = [1]
     azimuth = 0.0
     model = "RM_YOUNG_81000"
     threshold = -2
 
+    # Act & Assert: expect a ValueError due to the negative threshold
     with pytest.raises(ValueError, match="positive"):
         pre_processing.wind_dir_modeldependent_reference(u, v, azimuth, model, threshold)
 
-def test_wind_directions_modeldependent():
+def test_wind_dir_modeldependent_reference_no_azimuth():
+    # Arrange: define u, v components of wind and azimuth
     u = [ 0, -1/np.sqrt(2), -1, -1/np.sqrt(2), 0,
           1/np.sqrt(2), 1,  1/np.sqrt(2)]
     v = [-1, -1/np.sqrt(2),  0,  1/np.sqrt(2), 1, 
           1/np.sqrt(2), 0, -1/np.sqrt(2)]
     azimuth = 0.0
 
-    # RM_YOUNG_81000
+    # Act: Test for RM_YOUNG_81000 model with no azimuth
     result_rm = pre_processing.wind_dir_modeldependent_reference(u, v, azimuth, model="RM_YOUNG_81000")
     expected_rm = [(angle + 180) % 360 for angle in [0, 45, 90, 135, 180, 225, 270, 315]]
     np.testing.assert_allclose(result_rm, expected_rm, rtol=1e-5)
 
-    # CAMPBELL_CSAT3
+    # Act: Test for CAMPBELL_CSAT3 model with no azimuth
     result_cs = pre_processing.wind_dir_modeldependent_reference(u, v, azimuth, model="CAMPBELL_CSAT3")
     expected_cs = [(angle + 90) % 360 for angle in [0, 45, 90, 135, 180, 225, 270, 315]]
     np.testing.assert_allclose(result_cs, expected_cs, rtol=1e-5)
 
-def test_wind_direction_with_azimuth():
+def test_wind_dir_modeldependent_reference_with_azimuth():
+    # Arrange: define u, v components of wind and azimuth with a 30° rotation
     u = [0, -1/np.sqrt(2), -1, -1/np.sqrt(2), 0,
          1/np.sqrt(2), 1, 1/np.sqrt(2)]
     v = [-1, -1/np.sqrt(2), 0, 1/np.sqrt(2), 1, 
          1/np.sqrt(2), 0, -1/np.sqrt(2)]
-    azimuth = 30.0  # Rotazione di 30° (strumento montato ruotato di 30°)
+    azimuth = 30.0  # instrument rotated by 30°
 
-    # RM_YOUNG_81000
+    # Act: Test for RM_YOUNG_81000 model with azimuth
     result_rm = pre_processing.wind_dir_modeldependent_reference(u, v, azimuth, model="RM_YOUNG_81000")
     expected_rm = [((angle + 180) - azimuth) % 360 for angle in [0, 45, 90, 135, 180, 225, 270, 315]]
     np.testing.assert_allclose(result_rm, expected_rm, rtol=1e-5)
 
-    # CAMPBELL_CSAT3
+    # Act: Test for CAMPBELL_CSAT3 model with azimuth
     result_cs = pre_processing.wind_dir_modeldependent_reference(u, v, azimuth, model="CAMPBELL_CSAT3")
     expected_cs = [((angle + 90) - azimuth) % 360 for angle in [0, 45, 90, 135, 180, 225, 270, 315]]
     np.testing.assert_allclose(result_cs, expected_cs, rtol=1e-5)
 
-
 def test_wind_dir_modeldependent_reference_threshold():
-    # Dati di esempio
+    # Arrange: define u, v components, threshold, and azimuth
     u = np.array([0.01, 1.0])
     v = np.array([0.01, 0.0])
     threshold = 0.1
     azimuth = 0.0
 
-    # Test modello RM_YOUNG_81000
+    # Act & Assert: Test for RM_YOUNG_81000 model with threshold
     result = pre_processing.wind_dir_modeldependent_reference(u, v, azimuth, model="RM_YOUNG_81000", threshold=threshold)
-
-    # Controllo: il primo deve essere nan, il secondo un valore numerico corretto
     assert np.isnan(result[0]), f"Expected NaN for low wind speed, got {result[0]}"
     assert np.isclose(result[1], 90.0, atol=1e-2), f"Expected ~270 degrees, got {result[1]}"
 
-    # Test anche per modello CAMPBELL_CSAT3
+    # Act & Assert: Test for CAMPBELL_CSAT3 model with threshold
     result2 = pre_processing.wind_dir_modeldependent_reference(u, v, azimuth, model="CAMPBELL_CSAT3", threshold=threshold)
-
     assert np.isnan(result2[0]), f"Expected NaN for low wind speed, got {result2[0]}"
     assert np.isclose(result2[1], 0.0, atol=1e-2), f"Expected ~0 degrees, got {result2[1]}"
 
-
-# controlla che i risultati dati da wind dir su segnale ruotato e quello su segnale non ruotato
-# per entrambe le tipologie di strumenti
-# dia lo stesso risultato
-
 def test_comparison_wind_dir_methods_LEC_modeldependent_noazimuth():
-    # immaginando siano state misurate da RM_YOUNG_81000
+    # Arrange: Define wind components (u, v), w (constant), and azimuth for RM_YOUNG_81000 model
     u = [0, -1/np.sqrt(2), -1, -1/np.sqrt(2), 0,
          1/np.sqrt(2), 1, 1/np.sqrt(2)]
     v = [-1, -1/np.sqrt(2), 0, 1/np.sqrt(2), 1, 
@@ -979,33 +1181,37 @@ def test_comparison_wind_dir_methods_LEC_modeldependent_noazimuth():
     w = np.full(len(u), 0)
     
     azimuth = 0
-    wind = np.array([u,v,w])
+    wind = np.array([u, v, w])
     model = "RM_YOUNG_81000"
 
-    wind_dir_result_modeldependent = pre_processing.wind_dir_modeldependent_reference(u,v,azimuth,model)
+    # Act: Compute wind direction using modeldependent method
+    wind_dir_result_modeldependent = pre_processing.wind_dir_modeldependent_reference(u, v, azimuth, model)
 
+    # Act: Compute wind direction using LEC method
     wind_LEC = pre_processing.rotation_to_LEC_reference(wind, azimuth, model)
-    wind_dir_result_LEC = pre_processing.wind_dir_LEC_reference(wind_LEC[0,:],
-                                                                wind_LEC[1,:])
+    wind_dir_result_LEC = pre_processing.wind_dir_LEC_reference(wind_LEC[0, :], wind_LEC[1, :])
     
+    # Assert: Check if the results from the two methods are equal
     np.testing.assert_array_equal(wind_dir_result_modeldependent, wind_dir_result_LEC, 
                                   f"For model {model}: wind directions computed with the two different methods do NOT match!")
 
-    # immaginando siano state misurate da CAMPBELL_CSAT3
+    # Repeat for CAMPBELL_CSAT3 model
     model = "CAMPBELL_CSAT3"
 
-    wind_dir_result_modeldependent = pre_processing.wind_dir_modeldependent_reference(u,v,azimuth,model)
+    # Act: Compute wind direction using modeldependent method
+    wind_dir_result_modeldependent = pre_processing.wind_dir_modeldependent_reference(u, v, azimuth, model)
 
+    # Act: Compute wind direction using LEC method
     wind_LEC = pre_processing.rotation_to_LEC_reference(wind, azimuth, model)
-    wind_dir_result_LEC = pre_processing.wind_dir_LEC_reference(wind_LEC[0,:],
-                                                                wind_LEC[1,:])
+    wind_dir_result_LEC = pre_processing.wind_dir_LEC_reference(wind_LEC[0, :], wind_LEC[1, :])
     
+    # Assert: Check if the results from the two methods are equal
     np.testing.assert_array_equal(wind_dir_result_modeldependent, wind_dir_result_LEC, 
                                   f"For model {model}: wind directions computed with the two different methods do NOT match!")
 
 
 def test_comparison_wind_dir_methods_LEC_modeldependent_with_azimuth():
-    # immaginando siano state misurate da RM_YOUNG_81000
+    # Arrange: Define wind components (u, v), w (constant), and azimuth for RM_YOUNG_81000 model
     u = [0, -1/np.sqrt(2), -1, -1/np.sqrt(2), 0,
          1/np.sqrt(2), 1, 1/np.sqrt(2)]
     v = [-1, -1/np.sqrt(2), 0, 1/np.sqrt(2), 1, 
@@ -1013,26 +1219,30 @@ def test_comparison_wind_dir_methods_LEC_modeldependent_with_azimuth():
     w = np.full(len(u), 0)
     
     azimuth = 31
-    wind = np.array([u,v,w])
+    wind = np.array([u, v, w])
     model = "RM_YOUNG_81000"
 
-    wind_dir_result_modeldependent = pre_processing.wind_dir_modeldependent_reference(u,v,azimuth,model)
+    # Act: Compute wind direction using modeldependent method
+    wind_dir_result_modeldependent = pre_processing.wind_dir_modeldependent_reference(u, v, azimuth, model)
 
+    # Act: Compute wind direction using LEC method
     wind_LEC = pre_processing.rotation_to_LEC_reference(wind, azimuth, model)
-    wind_dir_result_LEC = pre_processing.wind_dir_LEC_reference(wind_LEC[0,:],
-                                                                wind_LEC[1,:])
+    wind_dir_result_LEC = pre_processing.wind_dir_LEC_reference(wind_LEC[0, :], wind_LEC[1, :])
     
+    # Assert: Check if the results from the two methods are equal
     np.testing.assert_array_equal(wind_dir_result_modeldependent, wind_dir_result_LEC, 
                                   f"For model {model}: wind directions computed with the two different methods do NOT match!")
 
-    # immaginando siano state misurate da CAMPBELL_CSAT3
+    # Repeat for CAMPBELL_CSAT3 model
     model = "CAMPBELL_CSAT3"
 
-    wind_dir_result_modeldependent = pre_processing.wind_dir_modeldependent_reference(u,v,azimuth,model)
+    # Act: Compute wind direction using modeldependent method
+    wind_dir_result_modeldependent = pre_processing.wind_dir_modeldependent_reference(u, v, azimuth, model)
 
+    # Act: Compute wind direction using LEC method
     wind_LEC = pre_processing.rotation_to_LEC_reference(wind, azimuth, model)
-    wind_dir_result_LEC = pre_processing.wind_dir_LEC_reference(wind_LEC[0,:],
-                                                                wind_LEC[1,:])
+    wind_dir_result_LEC = pre_processing.wind_dir_LEC_reference(wind_LEC[0, :], wind_LEC[1, :])
     
+    # Assert: Check if the results from the two methods are equal
     np.testing.assert_array_equal(wind_dir_result_modeldependent, wind_dir_result_LEC, 
                                   f"For model {model}: wind directions computed with the two different methods do NOT match!")
