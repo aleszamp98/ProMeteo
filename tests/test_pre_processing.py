@@ -412,6 +412,20 @@ def test_all_nans():
 
 ##### testing pre_processing.rotation_to_LEC_reference() #####
 
+def test_rotation_to_LEC_reference_shape_mismatch_error():
+    # Test that a ValueError is raised if the input shape is incorrect (wrong first dimension).
+    # Wind has wrong first dimension (2 instead of 3)
+    wind = np.array([
+        [1, 2, 3, 4],
+        [0, 0, 0, 0],
+    ])
+    azimuth = 0
+    model = "RM_YOUNG_81000"
+    with pytest.raises(ValueError, match="must have shape"):
+        pre_processing.rotation_to_LEC_reference(wind,
+                                                 azimuth,
+                                                 model)
+
 def test_invalid_azimuth():
     wind = np.zeros((3, 10))
     # lower than 0

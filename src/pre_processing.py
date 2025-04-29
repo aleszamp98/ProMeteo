@@ -370,10 +370,11 @@ def rotation_to_LEC_reference(wind : np.ndarray,
     Raises
     ------
     ValueError
+        If 'wind' does not have shape (3, N).
+    ValueError
         If the azimuth is outside the range [0, 360].
     ValueError
-        If the anemometer model is not recognized (i.e., not "RM_YOUNG_81000" or "CAMPBELL_CSAT3").
-    
+        If the anemometer model is not recognized (i.e., not "RM_YOUNG_81000" or "CAMPBELL_CSAT3").    
     Notes
     -----
     The function applies two sequential rotations:
@@ -389,6 +390,10 @@ def rotation_to_LEC_reference(wind : np.ndarray,
     # with the y-axis oriented in the direction 
     # defined by the azimuth angle with respect to North (positive clockwise)
     # the rotation matrix depends on the anemometer model
+
+    # Check input shapes
+    if wind.shape[0] != 3:
+        raise ValueError("'wind' must have shape (3, N)")
     
     if not (0 <= azimuth <= 360):
         raise ValueError( "azimuth is outside the range [0,360].")
@@ -446,6 +451,7 @@ def rotation_to_streamline_reference(wind: np.ndarray,
     ------
     ValueError
         If 'wind' or 'wind_averaged' do not have shape (3, N).
+    ValueError
         If 'wind' and 'wind_averaged' do not have the same number of columns (N).
 
     Notes
@@ -567,6 +573,7 @@ def wind_dir_modeldependent_reference(u: Union[np.ndarray, list, float, int],
     ------
     ValueError
         If the shapes of u and v do not match.
+    ValueError
         If an unknown model is specified.
     """
     u = np.asarray(u)
