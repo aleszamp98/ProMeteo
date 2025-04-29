@@ -95,8 +95,16 @@ def linear_interp(left_value : float,
     -------
     np.ndarray
         An array containing the interpolated values.
+    
+    Raises
+    ------
+    ValueError
+        If `length` is not a positive integer.
 
     """
+    if not isinstance(length, int) or length <= 0:
+        raise ValueError("`length` must be a positive integer.")
+
     # Create an array of relative indices for the length
     x = np.arange(1, length + 1)
     

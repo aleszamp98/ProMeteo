@@ -176,6 +176,26 @@ def test_linear_interp_coincindent_left_right():
     # Assert: output is as expected
     np.testing.assert_array_equal(result, expected)
 
+def test_linear_interp_invalid_length():
+    # Arrange: valid left and right values
+    left_value = 0.0
+    right_value = 1.0
+
+    # Act & Assert: check ValueError is raised for length = 0
+    length = 0
+    with pytest.raises(ValueError, match="positive"):
+        pre_processing.linear_interp(left_value, right_value, length)
+
+    # Act & Assert: check ValueError is raised for negative length
+    length = -1
+    with pytest.raises(ValueError, match="positive"):
+        pre_processing.linear_interp(left_value, right_value, length)
+
+    # Act & Assert: check ValueError is raised for non-integer length
+    length = 3.5
+    with pytest.raises(ValueError, match="positive"):
+        pre_proc
+
 #######################################################################
 ########### testing pre_processing.identify_interp_spikes() ###########
 #######################################################################
