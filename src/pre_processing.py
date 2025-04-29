@@ -5,8 +5,9 @@ from typing import Tuple, Optional, Union
 # import src.core as core
 import core
 
-## controllo se possiede un numero di entrate pari alla frequenza* delta_t compreso tra l'inzio e la fine del 
-def fill_missing_timestamps(data: pd.DataFrame, freq: float) -> pd.DataFrame:
+def fill_missing_timestamps(data: pd.DataFrame, 
+                            freq: float
+                            ) -> pd.DataFrame:
     """
     Ensures a DataFrame with a datetime index includes all timestamps between 
     the first and last entry, based on the given frequency. Missing timestamps 
@@ -21,11 +22,18 @@ def fill_missing_timestamps(data: pd.DataFrame, freq: float) -> pd.DataFrame:
 
     Returns
     -------
-    pd.DataFrame
+    complete_data : pd.DataFrame
         DataFrame reindexed to include all expected timestamps.
+    
+    Raises
+    ------
+    ValueError
+        If `freq` is negative.
     """
+    # --- Input validation ---
     if freq <= 0:
         raise ValueError("Frequency (Hz) must be a positive number.")
+    
     dt_s=1/freq
     freq = pd.to_timedelta(dt_s, unit='s') # pandas-compatible frequency string
     data = data.sort_index()    
@@ -34,10 +42,9 @@ def fill_missing_timestamps(data: pd.DataFrame, freq: float) -> pd.DataFrame:
     
     return complete_data
     
-def remove_beyond_threshold(
-    array: np.ndarray,
-    threshold: float,
-    ) -> Tuple[np.ndarray, int]:
+def remove_beyond_threshold(array: np.ndarray,
+                            threshold: float
+                            ) -> Tuple[np.ndarray, int]:
     """
     Replaces all values in the input array that exceed a given absolute threshold with NaN.
 
@@ -60,6 +67,7 @@ def remove_beyond_threshold(
     ValueError
         If `threshold` is negative.
     """
+    # --- Input validation ---
     if threshold < 0:
         raise ValueError(f" Threshold must be positive.")
     
@@ -69,10 +77,6 @@ def remove_beyond_threshold(
     array_clean[where_beyond] = np.nan
 
     return array_clean, count_beyond
-
-##### DESPIKING SECTION #####
-# definizione input: finestra in min per calcolo mobile, numero di valori consecutivi fuori soglia, costanti da cui partire:
-#  c_h (orizzontale), c_v (verticale), c_T (temp)
 
 def linear_interp(left_value : float,
                   right_value : float,
@@ -93,7 +97,7 @@ def linear_interp(left_value : float,
     
     Returns
     -------
-    np.ndarray
+    interpolated_values : np.ndarray
         An array containing the interpolated values.
     
     Raises
@@ -102,6 +106,7 @@ def linear_interp(left_value : float,
         If `length` is not a positive integer.
 
     """
+    # --- Input validation ---
     if not isinstance(length, int) or length <= 0:
         raise ValueError("`length` must be a positive integer.")
 
@@ -136,8 +141,10 @@ def identify_interp_spikes(array: np.ndarray,
 
     Returns
     -------
-    tuple[np.ndarray, int]
-        A tuple containing the modified array with interpolated spike values and the total count of detected spikes.
+    array : np.ndarray
+        The modified array with interpolated spike values
+    count_spike : int
+        The total count of detected spikes.
     
     Raises
     ------
@@ -197,7 +204,8 @@ def despiking_VM97(array_to_despike: np.ndarray,
                    window_length: int,
                    max_consecutive_spikes: int,
                    max_iterations: int,
-                   logger : Optional[logging.Logger] = None) -> np.ndarray:
+                   logger : Optional[logging.Logger] = None
+                   ) -> np.ndarray:
     """
     Applies the despiking algorithm based on Vickers and Mahrt (1997) to remove spikes from a time series.
 
@@ -228,16 +236,20 @@ def despiking_VM97(array_to_despike: np.ndarray,
     
     Returns
     -------
-    np.ndarray
+    array_despiked : np.ndarray
         The despiked version of the input array.
     
     Raises
     ------
     ValueError
         If `c` is not a positive number.
+    ValueError
         If `window_length` is not a positive integer.
+    ValueError
         If `max_consecutive_spikes` is not a positive integer.
+    ValueError
         If `max_iterations` is not a positive integer.
+    ValueError
         If `logger` is not a logging.Logger instance or None.
     
     References
@@ -289,7 +301,8 @@ def despiking_VM97(array_to_despike: np.ndarray,
 
 def despiking_robust(array_to_despike: np.ndarray,
                      c: float,
-                     window_length: int) -> np.ndarray:
+                     window_length: int
+                     ) -> np.ndarray:
     """
     Applies a non-iterative despiking algorithm using robust statistics to remove spikes from a time series.
 
@@ -315,11 +328,11 @@ def despiking_robust(array_to_despike: np.ndarray,
 
     Returns
     -------
-    np.ndarray
+    array_despiked : np.ndarray
         The despiked version of the input array, with spikes replaced by the running median.
-    int
+    count_spike : int
         The total number of spikes detected and replaced.
-        
+
     Raises
     ------
     ValueError
@@ -327,7 +340,7 @@ def despiking_robust(array_to_despike: np.ndarray,
     ValueError
         If `window_length` is not a positive integer.
     """
-
+    # --- Input validation ---
     if not isinstance(c, (int, float)) or c <= 0:
         raise ValueError("Parameter `c` must be a positive number.")
     if not isinstance(window_length, int) or window_length <= 0:
@@ -350,7 +363,8 @@ def despiking_robust(array_to_despike: np.ndarray,
     return array_despiked, count_spike
 
 
-def interp_nan(array: np.ndarray) -> Tuple[np.ndarray, int]:
+def interp_nan(array: np.ndarray
+               ) -> Tuple[np.ndarray, int]:
     """
     Interpolates NaN values in the input array using linear interpolation.
     NaNs are replaced with values computed by the `linear_interp` function,
@@ -365,10 +379,9 @@ def interp_nan(array: np.ndarray) -> Tuple[np.ndarray, int]:
 
     Returns
     -------
-    np.ndarray
-        A copy of the input array with NaN values replaced by interpolated values,
-        where possible.
-    int
+    array_interp : np.ndarray
+        A copy of the input array with NaN values replaced by interpolated values, where possible.
+    count_interp : int
         Number of NaN values that were successfully interpolated.
     """
     array_interp = array.copy()
@@ -405,7 +418,8 @@ def interp_nan(array: np.ndarray) -> Tuple[np.ndarray, int]:
 
 def rotation_to_LEC_reference(wind : np.ndarray,
                               azimuth : float,
-                              model : str) -> np.ndarray: 
+                              model : str
+                              ) -> np.ndarray: 
     """
     Rotate the wind vector from the anemometer reference system 
     to the Local Earth Coordinate system (LEC), given the orientation `azimuth`
@@ -427,7 +441,7 @@ def rotation_to_LEC_reference(wind : np.ndarray,
 
     Returns
     -------
-    np.ndarray
+    wind_rotated : np.ndarray
         A 3xN array (shape (3, N)) of wind vectors rotated into the LEC reference frame,
         with the y-axis aligned to the geographic North.
     
@@ -439,6 +453,7 @@ def rotation_to_LEC_reference(wind : np.ndarray,
         If the azimuth is outside the range [0, 360].
     ValueError
         If the anemometer model is not recognized (i.e., not "RM_YOUNG_81000" or "CAMPBELL_CSAT3").    
+    
     Notes
     -----
     The function applies two sequential rotations:
@@ -455,10 +470,9 @@ def rotation_to_LEC_reference(wind : np.ndarray,
     # defined by the azimuth angle with respect to North (positive clockwise)
     # the rotation matrix depends on the anemometer model
 
-    # Check input shapes
+    # --- Input validation ---
     if wind.shape[0] != 3:
         raise ValueError("'wind' must have shape (3, N)")
-    
     if not (0 <= azimuth <= 360):
         raise ValueError( "azimuth is outside the range [0,360].")
     
@@ -491,7 +505,8 @@ def rotation_to_LEC_reference(wind : np.ndarray,
     return wind_rotated
 
 def rotation_to_streamline_reference(wind: np.ndarray,
-                                     wind_averaged: np.ndarray) -> np.ndarray:
+                                     wind_averaged: np.ndarray
+                                     ) -> np.ndarray:
     """
     Rotate wind velocity components into the streamline coordinate system,
     following the method of Khaimal and Finnigan (1979).
@@ -525,7 +540,7 @@ def rotation_to_streamline_reference(wind: np.ndarray,
     - y-axis perpendicular to the x-axis horizontally,
     - z-axis aligned with the mean vertical direction.
     """
-    # Check input shapes
+    # --- Input validation ---
     if wind.shape[0] != 3 or wind_averaged.shape[0] != 3:
         raise ValueError("Both 'wind' and 'wind_averaged' must have shape (3, N)")
     if wind.shape[1] != wind_averaged.shape[1]:
@@ -563,7 +578,8 @@ def rotation_to_streamline_reference(wind: np.ndarray,
 
 def wind_dir_LEC_reference(u: Union[np.ndarray, list, float, int], 
                            v: Union[np.ndarray, list, float, int],
-                           threshold: float = 0.0) -> np.ndarray:
+                           threshold: float = 0.0
+                           ) -> np.ndarray:
     """
     Compute wind direction from u and v wind components in a Local Earth Coordinate (LEC) reference system, 
     following the meteorological convention.
@@ -585,7 +601,7 @@ def wind_dir_LEC_reference(u: Union[np.ndarray, list, float, int],
 
     Returns
     -------
-    wind_direction : ndarray
+    wind_direction : np.ndarray
         Wind direction in degrees, values between 0° and 360° (0 inclusive, 360 exclusive), or NaN if below threshold.
 
     Raises
@@ -597,7 +613,7 @@ def wind_dir_LEC_reference(u: Union[np.ndarray, list, float, int],
     """
     u = np.asarray(u)
     v = np.asarray(v)
-    
+    # --- Input validation ---
     if u.shape != v.shape:
         raise ValueError(f"Shape mismatch: u.shape = {u.shape}, v.shape = {v.shape}")
     if threshold < 0:
@@ -615,7 +631,8 @@ def wind_dir_modeldependent_reference(u: Union[np.ndarray, list, float, int],
                                       v: Union[np.ndarray, list, float, int],
                                       azimuth: float,
                                       model: str,
-                                      threshold: float = 0.0) -> np.ndarray:
+                                      threshold: float = 0.0
+                                      ) -> np.ndarray:
     """
     Compute the wind direction based on the model of the anemometer and a custom azimuth.
 
@@ -634,7 +651,7 @@ def wind_dir_modeldependent_reference(u: Union[np.ndarray, list, float, int],
 
     Returns
     -------
-    np.ndarray
+    wind_direction : np.ndarray
         The wind direction in degrees, with 0° corresponding to North, 90° to East, etc., or NaN if below threshold.
 
     Raises
@@ -648,7 +665,7 @@ def wind_dir_modeldependent_reference(u: Union[np.ndarray, list, float, int],
     """
     u = np.asarray(u)
     v = np.asarray(v)
-
+    # --- Input validation ---
     if u.shape != v.shape:
         raise ValueError(f"Shape mismatch: u.shape = {u.shape}, v.shape = {v.shape}")
     if threshold < 0:
