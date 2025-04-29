@@ -54,8 +54,15 @@ def remove_beyond_threshold(
         A copy of the input array with values exceeding the threshold replaced by NaN.
     count_beyond : int
         The number of elements that were beyond the threshold and replaced.
-
+    
+    Raises
+    ------
+    ValueError
+        If `threshold` is negative.
     """
+    if threshold < 0:
+        raise ValueError(f" Threshold must be positive.")
+    
     array_clean = array.copy()
     where_beyond = np.abs(array_clean) > threshold
     count_beyond = np.count_nonzero(where_beyond)

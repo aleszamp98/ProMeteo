@@ -121,6 +121,15 @@ def test_remove_beyond_threshold_empty_array():
     assert count == 0, "Empty array should result in zero replacements"
     assert result_array.size == 0, "Result should be an empty array"
 
+def test_remove_beyond_threshold_negative_threshold():
+    # Arrange: a valid array, but a negative threshold
+    threshold = -6.0
+    array = np.array([1.0, 5.0, -7.0, 3.0, -10.0])
+
+    # Act & Assert: expect a ValueError due to the negative threshold
+    with pytest.raises(ValueError, match="positive"):
+         result_array, count = pre_processing.remove_beyond_threshold(array, threshold)
+
 #######################################################################
 ############## testing pre_precessing.linear_interp() #################
 #######################################################################
