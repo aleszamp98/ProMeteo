@@ -1,6 +1,5 @@
-ProMeteo Documentation
-======================
-Welcome to the ProMeteo documentation!
+ProMeteo modules
+================
 
 core module
 ------------
