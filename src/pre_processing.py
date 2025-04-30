@@ -164,6 +164,14 @@ def identify_interp_spikes(array: np.ndarray,
     - Only sequences of True values that are smaller than or equal to `max_length_spike` are considered spikes.
     """
 
+     # --- Input validation ---
+    if len(array) != len(mask):
+        raise ValueError("`array` and `mask` must have the same length.")
+    if mask.dtype != bool:
+        raise ValueError("`mask` must be a boolean array.")
+    if not isinstance(max_length_spike, int) or max_length_spike <= 0:
+        raise ValueError("`max_length_spike` must be a positive integer.")
+
     # --- Spike detection and interpolation ---
     flag = False  # Flag to track the beginning of a spike sequence
     count_spike = 0  # Counter to keep track of the total number of spikes detected
