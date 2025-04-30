@@ -1,5 +1,5 @@
-ProMeteo modules
-================
+ProMeteo functions
+==================
 
 core module
 ------------

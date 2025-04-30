@@ -7,9 +7,7 @@ Welcome to the ProMeteo documentation!
    :maxdepth: 2
    :caption: Contents:
 
-   pages/intro
-   pages/installation
-   pages/flowchart
+   pages/welcome
    pages/despiking
    pages/rotation
    src

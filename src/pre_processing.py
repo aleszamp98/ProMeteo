@@ -462,9 +462,7 @@ def rotation_to_LEC_reference(wind : np.ndarray,
         of the anemometer head with respect to the North-
     model : str
         The anemometer model used for the measurement. 
-        Only two models are supported:
-            - "RM_YOUNG_81000"
-            - "CAMPBELL_CSAT3"
+        Only two models are supported: "RM_YOUNG_81000", "CAMPBELL_CSAT3"
 
     Returns
     -------

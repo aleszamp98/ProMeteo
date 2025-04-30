@@ -44,9 +44,9 @@ The full documentation for the project is available on [Read the Docs: ProMeteo]
 ## Contributing
 ProMeteo is an open project. Suggestions, corrections, and contributions are very welcome!
 
--Open an issue for bugs or feature requests
--Submit a pull request to contribute code or improvements
--Or contact me directly via email (see below)
+- Open an issue for bugs or feature requests
+- Submit a pull request to contribute code or improvements
+- Or contact me directly via email (see GitHub profile page)
 
 ## How to Cite
 If you use ProMeteo in a publication or presentation, please cite it as:
