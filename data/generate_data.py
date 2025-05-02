@@ -4,15 +4,15 @@ import os
 import matplotlib.pyplot as plt
 
 
-dir_out=os.path.dirname(os.path.abspath(__file__))+"/"
-name_out="test_data"
-length=60 # [min]
-sampl_frequency=20 # [Hz]
-dt=int((1/sampl_frequency)*1000) # [ms]
+dir_out = os.path.dirname(os.path.abspath(__file__))+"/"
+name_out = "test_data"
+length = 60 # [min]
+sampl_frequency = 20 # [Hz]
+dt = int((1/sampl_frequency)*1000) # [ms]
 n_rows= 60*60*20+1 # number of fictitious measures
 
 # generates normal distributed values for the three components of the wind and the sonic temperature
-u=np.random.normal(loc=2, scale=1, size=n_rows) # [m/s]
+u  =np.random.normal(loc=2, scale=1, size=n_rows) # [m/s]
 v=np.random.normal(loc=2, scale=1, size=n_rows) # [m/s]
 w=np.random.normal(loc=0.01, scale=1, size=n_rows) # [m/s]
 T_s=np.random.normal(loc=20, scale=1, size=n_rows) # [°C]

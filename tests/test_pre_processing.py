@@ -1227,40 +1227,146 @@ def test_wind_dir_modeldependent_reference_negative_threshold():
         pre_processing.wind_dir_modeldependent_reference(u, v, azimuth, model, threshold)
 
 def test_wind_dir_modeldependent_reference_no_azimuth():
-    # Arrange: define u, v components of wind and azimuth
-    u = [ 0, -1/np.sqrt(2), -1, -1/np.sqrt(2), 0,
-          1/np.sqrt(2), 1,  1/np.sqrt(2)]
-    v = [-1, -1/np.sqrt(2),  0,  1/np.sqrt(2), 1, 
-          1/np.sqrt(2), 0, -1/np.sqrt(2)]
+    # Arrange: define u_LEC, LEC components of wind and azimuth
+    u_LEC = np.array([ 0, -1/np.sqrt(2), -1, -1/np.sqrt(2), 0,
+          1/np.sqrt(2), 1,  1/np.sqrt(2)])
+    v_LEC = np.array([-1, -1/np.sqrt(2),  0,  1/np.sqrt(2), 1, 
+          1/np.sqrt(2), 0, -1/np.sqrt(2)])
+    # Arrange: compute wind direction in the meteorological convention using wind_dir_LEC
+    expected = pre_processing.wind_dir_LEC_reference(u_LEC, v_LEC, threshold = 0)
+    # Arrange: set null azimuth
     azimuth = 0.0
 
+    # Arrange: compute the wind components as measured by RM YOUNG anemometer
+    u_measured_YOUNG = - u_LEC
+    v_measured_YOUNG = - v_LEC
     # Act: Test for RM_YOUNG_81000 model with no azimuth
-    result_rm = pre_processing.wind_dir_modeldependent_reference(u, v, azimuth, model="RM_YOUNG_81000")
-    expected_rm = [(angle + 180) % 360 for angle in [0, 45, 90, 135, 180, 225, 270, 315]]
-    np.testing.assert_allclose(result_rm, expected_rm, rtol=1e-5)
+    result_RM_YOUNG = pre_processing.wind_dir_modeldependent_reference(u_measured_YOUNG,
+                                                                       v_measured_YOUNG,
+                                                                       azimuth,
+                                                                       model="RM_YOUNG_81000")
+    # Assert: result as expected
+    np.testing.assert_allclose(result_RM_YOUNG, expected, rtol=1e-5)
 
-    # Act: Test for CAMPBELL_CSAT3 model with no azimuth
-    result_cs = pre_processing.wind_dir_modeldependent_reference(u, v, azimuth, model="CAMPBELL_CSAT3")
-    expected_cs = [(angle + 90) % 360 for angle in [0, 45, 90, 135, 180, 225, 270, 315]]
-    np.testing.assert_allclose(result_cs, expected_cs, rtol=1e-5)
+    # Arrange: compute the wind components as measured by CAMPBELL CSAT3 anemometer
+    u_measured_CSAT = - v_LEC
+    v_measured_CSAT =   u_LEC
+    # Act: Test for RM_YOUNG_81000 model with no azimuth
+    result_CSAT = pre_processing.wind_dir_modeldependent_reference(u_measured_CSAT,
+                                                                   v_measured_CSAT,
+                                                                   azimuth,
+                                                                   model="CAMPBELL_CSAT3")
+    # Assert: result as expected
+    np.testing.assert_allclose(result_CSAT, expected, rtol=1e-5)
 
 def test_wind_dir_modeldependent_reference_with_azimuth():
-    # Arrange: define u, v components of wind and azimuth with a 30° rotation
-    u = [0, -1/np.sqrt(2), -1, -1/np.sqrt(2), 0,
-         1/np.sqrt(2), 1, 1/np.sqrt(2)]
-    v = [-1, -1/np.sqrt(2), 0, 1/np.sqrt(2), 1, 
-         1/np.sqrt(2), 0, -1/np.sqrt(2)]
-    azimuth = 30.0  # instrument rotated by 30°
+    # --- Case A: acute azimuth (30°) ---
+    # Wind from:
+    # - NE (40°)        => 1st quadrant
+    # - SE (180-40=140) => 2nd quadrant
+    # - SW (180+40=220) => 3rd quadrant
+    # - NW (270+40=310) => 4th quadrant
+    azimuth_A = 30
 
-    # Act: Test for RM_YOUNG_81000 model with azimuth
-    result_rm = pre_processing.wind_dir_modeldependent_reference(u, v, azimuth, model="RM_YOUNG_81000")
-    expected_rm = [((angle + 180) - azimuth) % 360 for angle in [0, 45, 90, 135, 180, 225, 270, 315]]
-    np.testing.assert_allclose(result_rm, expected_rm, rtol=1e-5)
+    # Arrange: define wind components in a rotated frame of an angle `azimuth` with respect to the North
+    u_measured_LEC_rot_A = np.array([
+        -np.sin(np.deg2rad(40 - 30)),
+        -np.cos(np.deg2rad(90 - 40 - 30)),
+        np.sin(np.deg2rad(40 - 30)),
+        np.cos(np.deg2rad(40 - 30))
+    ])
+    v_measured_LEC_rot_A = np.array([
+        -np.cos(np.deg2rad(40 - 30)),
+        np.sin(np.deg2rad(90 - 40 - 30)),
+        np.cos(np.deg2rad(40 - 30)),
+        -np.sin(np.deg2rad(40 - 30))
+    ])
+    wind_dir_expected_A = [40, 140, 220, 310]
 
-    # Act: Test for CAMPBELL_CSAT3 model with azimuth
-    result_cs = pre_processing.wind_dir_modeldependent_reference(u, v, azimuth, model="CAMPBELL_CSAT3")
-    expected_cs = [((angle + 90) - azimuth) % 360 for angle in [0, 45, 90, 135, 180, 225, 270, 315]]
-    np.testing.assert_allclose(result_cs, expected_cs, rtol=1e-5)
+    # Arrange: convert to RM YOUNG measured components
+    u_measured_Y_A = -u_measured_LEC_rot_A
+    v_measured_Y_A = -v_measured_LEC_rot_A
+
+    # Act: compute wind direction with RM_YOUNG_81000 model
+    result_RM_YOUNG_A = pre_processing.wind_dir_modeldependent_reference(
+        u_measured_Y_A,
+        v_measured_Y_A,
+        azimuth_A,
+        model="RM_YOUNG_81000"
+    )
+
+    # Assert: compare with expected directions
+    np.testing.assert_allclose(result_RM_YOUNG_A, wind_dir_expected_A, rtol=1e-5)
+
+    # Arrange: convert to CSAT3 measured components
+    u_measured_CSAT_A = -v_measured_LEC_rot_A
+    v_measured_CSAT_A = u_measured_LEC_rot_A
+
+    # Act: compute wind direction with CAMPBELL_CSAT3 model
+    result_CSAT_A = pre_processing.wind_dir_modeldependent_reference(
+        u_measured_CSAT_A,
+        v_measured_CSAT_A,
+        azimuth_A,
+        model="CAMPBELL_CSAT3"
+    )
+
+    # Assert: compare with expected directions
+    np.testing.assert_allclose(result_CSAT_A, wind_dir_expected_A, rtol=1e-5)
+
+    # --- Case B: obtuse azimuth (120°) ---
+    # Wind from:
+    # - NE (40°)        => 1st quadrant
+    # - SE (180-40=140) => 2nd quadrant
+    # - SW (180+40=220) => 3rd quadrant
+    # - NW (270+40=310) => 4th quadrant
+    azimuth_B = 120
+
+    # Arrange: define wind components in LEC frame (rotated for 40° wind direction)
+    u_measured_LEC_rot_B = np.array([
+        np.cos(np.deg2rad(40 - 30)),
+        -np.sin(np.deg2rad(20)),
+        -np.cos(np.deg2rad(40 - 30)),
+        np.sin(np.deg2rad(40 - 30))
+    ])
+    v_measured_LEC_rot_B = np.array([
+        -np.sin(np.deg2rad(40 - 30)),
+        -np.cos(np.deg2rad(20)),
+        np.sin(np.deg2rad(40 - 30)),
+        np.cos(np.deg2rad(40 - 30))
+    ])
+    wind_dir_expected_B = [40, 140, 220, 310]
+
+    # Arrange: convert to RM YOUNG measured components
+    u_measured_Y_B = -u_measured_LEC_rot_B
+    v_measured_Y_B = -v_measured_LEC_rot_B
+
+    # Act: compute wind direction with RM_YOUNG_81000 model
+    result_RM_YOUNG_B = pre_processing.wind_dir_modeldependent_reference(
+        u_measured_Y_B,
+        v_measured_Y_B,
+        azimuth_B,
+        model="RM_YOUNG_81000"
+    )
+
+    # Assert: compare with expected directions
+    np.testing.assert_allclose(result_RM_YOUNG_B, wind_dir_expected_B, rtol=1e-5)
+
+    # Arrange: convert to CSAT3 measured components
+    u_measured_CSAT_B = -v_measured_LEC_rot_B
+    v_measured_CSAT_B = u_measured_LEC_rot_B
+
+    # Act: compute wind direction with CAMPBELL_CSAT3 model
+    result_CSAT_B = pre_processing.wind_dir_modeldependent_reference(
+        u_measured_CSAT_B,
+        v_measured_CSAT_B,
+        azimuth_B,
+        model="CAMPBELL_CSAT3"
+    )
+
+    # Assert: compare with expected directions
+    np.testing.assert_allclose(result_CSAT_B, wind_dir_expected_B, rtol=1e-5)
+
+    
 
 def test_wind_dir_modeldependent_reference_threshold():
     # Arrange: define u, v components, threshold, and azimuth
@@ -1317,7 +1423,7 @@ def test_comparison_wind_dir_methods_LEC_modeldependent_noazimuth():
                                   f"For model {model}: wind directions computed with the two different methods do NOT match!")
 
 
-def test_comparison_wind_dir_methods_LEC_modeldependent_with_azimuth():
+def test_comparison_wind_dir_methods_LEC_modeldependent_with_acute_azimuth():
     # Arrange: Define wind components (u, v), w (constant), and azimuth for RM_YOUNG_81000 model
     u = [0, -1/np.sqrt(2), -1, -1/np.sqrt(2), 0,
          1/np.sqrt(2), 1, 1/np.sqrt(2)]
@@ -1337,8 +1443,8 @@ def test_comparison_wind_dir_methods_LEC_modeldependent_with_azimuth():
     wind_dir_result_LEC = pre_processing.wind_dir_LEC_reference(wind_LEC[0, :], wind_LEC[1, :])
     
     # Assert: Check if the results from the two methods are equal
-    np.testing.assert_array_equal(wind_dir_result_modeldependent, wind_dir_result_LEC, 
-                                  f"For model {model}: wind directions computed with the two different methods do NOT match!")
+    np.testing.assert_allclose(wind_dir_result_modeldependent, wind_dir_result_LEC, rtol=1e-12,
+                                  err_msg=f"For model {model}: wind directions computed with the two different methods do NOT match!")
 
     # Repeat for CAMPBELL_CSAT3 model
     model = "CAMPBELL_CSAT3"
@@ -1351,8 +1457,45 @@ def test_comparison_wind_dir_methods_LEC_modeldependent_with_azimuth():
     wind_dir_result_LEC = pre_processing.wind_dir_LEC_reference(wind_LEC[0, :], wind_LEC[1, :])
     
     # Assert: Check if the results from the two methods are equal
-    np.testing.assert_array_equal(wind_dir_result_modeldependent, wind_dir_result_LEC, 
-                                  f"For model {model}: wind directions computed with the two different methods do NOT match!")
+    np.testing.assert_allclose(wind_dir_result_modeldependent, wind_dir_result_LEC, rtol=1e-12, 
+                                  err_msg=f"For model {model}: wind directions computed with the two different methods do NOT match!")
+    
+def test_comparison_wind_dir_methods_LEC_modeldependent_with_obtuse_azimuth():
+    # Arrange: Define wind components (u, v), w (constant), and azimuth for RM_YOUNG_81000 model
+    u = [0, -1/np.sqrt(2), -1, -1/np.sqrt(2), 0,
+         1/np.sqrt(2), 1, 1/np.sqrt(2)]
+    v = [-1, -1/np.sqrt(2), 0, 1/np.sqrt(2), 1, 
+         1/np.sqrt(2), 0, -1/np.sqrt(2)]
+    w = np.full(len(u), 0)
+    
+    azimuth = 270
+    wind = np.array([u, v, w])
+    model = "RM_YOUNG_81000"
+
+    # Act: Compute wind direction using modeldependent method
+    wind_dir_result_modeldependent = pre_processing.wind_dir_modeldependent_reference(u, v, azimuth, model)
+
+    # Act: Compute wind direction using LEC method
+    wind_LEC = pre_processing.rotation_to_LEC_reference(wind, azimuth, model)
+    wind_dir_result_LEC = pre_processing.wind_dir_LEC_reference(wind_LEC[0, :], wind_LEC[1, :])
+    
+    # Assert: Check if the results from the two methods are equal
+    np.testing.assert_allclose(wind_dir_result_modeldependent, wind_dir_result_LEC, rtol=1e-12,
+                                  err_msg=f"For model {model}: wind directions computed with the two different methods do NOT match!")
+
+    # Repeat for CAMPBELL_CSAT3 model
+    model = "CAMPBELL_CSAT3"
+
+    # Act: Compute wind direction using modeldependent method
+    wind_dir_result_modeldependent = pre_processing.wind_dir_modeldependent_reference(u, v, azimuth, model)
+
+    # Act: Compute wind direction using LEC method
+    wind_LEC = pre_processing.rotation_to_LEC_reference(wind, azimuth, model)
+    wind_dir_result_LEC = pre_processing.wind_dir_LEC_reference(wind_LEC[0, :], wind_LEC[1, :])
+    
+    # Assert: Check if the results from the two methods are equal
+    np.testing.assert_allclose(wind_dir_result_modeldependent, wind_dir_result_LEC, rtol=1e-12, 
+                                  err_msg=f"For model {model}: wind directions computed with the two different methods do NOT match!")
 
 #######################################################################
 #######################################################################

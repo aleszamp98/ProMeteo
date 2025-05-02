@@ -738,12 +738,9 @@ def wind_dir_modeldependent_reference(u: Union[np.ndarray, list, float, int],
         raise ValueError(f"Unknown model: {model}. Supported models are 'RM_YOUNG_81000' and 'CAMPBELL_CSAT3'.")
 
     # --- Calculate the wind direction in the LEC system ---
-    # Calculate the wind direction using the atan2 function, then convert it to degrees.
-    wind_direction = (np.degrees(np.arctan2(u_LEC, v_LEC)) + 180) % 360
-
-    # --- Calculate the true wind direction ---
-    # The true wind direction is obtained by subtracting the azimuth angle from the wind direction.
-    true_wind_direction = (wind_direction - azimuth) % 360
+    # Calculate the wind direction using the atan2 function, consider the azimuth, 
+    # use the meteorological convention, then convert it to degrees.
+    wind_direction = (np.degrees(np.arctan2(u_LEC, v_LEC)) + azimuth + 180) % 360
 
     # --- Calculate the wind speed ---
     # The wind speed is computed as the Euclidean norm of the u and v components.
@@ -752,7 +749,9 @@ def wind_dir_modeldependent_reference(u: Union[np.ndarray, list, float, int],
     # --- Thresholding ---
     # If the wind speed is below the specified threshold, set the true wind direction to NaN.
     # This step ignores directions where the wind speed is too low to be meaningful.
-    true_wind_direction = np.where(wind_speed < threshold, np.nan, true_wind_direction)
 
-    return true_wind_direction
+    wind_direction = np.where(wind_speed < threshold, np.nan, wind_direction)
+
+    # return true_wind_direction
+    return wind_direction
 
