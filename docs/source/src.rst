@@ -1,34 +1,26 @@
 ProMeteo functions
 ==================
 
-core module
-------------
+core
+----
 
 .. automodule:: core
    :members:
    :undoc-members:
    :show-inheritance:
 
-pre_processing module
----------------------
+pre_processing
+--------------
 
 .. automodule:: pre_processing
    :members:
    :undoc-members:
    :show-inheritance:
 
-reynolds module
----------------
+frame
+-----
 
-.. automodule:: reynolds
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-plotting module
----------------
-
-.. automodule:: plotting
+.. automodule:: frame
    :members:
    :undoc-members:
    :show-inheritance:
