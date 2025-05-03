@@ -5,169 +5,112 @@ import configparser
 from typing import Tuple
 import warnings
 
-def load_config(path : str) -> dict:
+def load_config(path: str) -> dict:
     """
-    Loads parameters from a config.txt file and returns them as a dictionary.
+    Load and validate parameters from a configuration file.
+
+    This function reads a configuration file in INI format (e.g., config.txt),
+    extracts and validates the necessary parameters, and returns them in a dictionary.
 
     Parameters
     ----------
-    path : str or Path
-        Path to the config.txt file.
+    path : str
+        Path to the configuration file (e.g., 'config.txt').
 
     Returns
     -------
-    params : dict
-        Dictionary containing the parameters for main.py .
+    dict
+        Dictionary containing validated parameters required by `main.py`.
 
     Raises
     ------
     FileNotFoundError
-        If the file does not exist or cannot be read.
+        If the configuration file cannot be found or read.
     configparser.NoSectionError
-        If a required section is missing.
+        If a required section is missing from the configuration.
     configparser.NoOptionError
-        If a required option is missing.
+        If a required option is missing from a section.
     ValueError
-        If a parameter cannot be converted to the expected type.
+        If a parameter has an invalid value or cannot be converted to its expected type.
     """
+
     config = configparser.ConfigParser()
     files_read = config.read(path)
+    if not files_read:
+        raise FileNotFoundError(f"Configuration file '{path}' not found or not readable.")
 
     try:
+        # General
         rawdata_path = config.get('general', 'rawdata_path')
         dir_out = config.get('general', 'dir_out')
-        sampling_freq_str = config.get('general', 'sampling_freq')
+        sampling_freq = config.getfloat('general', 'sampling_freq')
         model = config.get('general', 'model')
 
-        horizontal_threshold_str = config.get('remove_beyond_threshold', 'horizontal_threshold')
-        vertical_threshold_str = config.get('remove_beyond_threshold', 'vertical_threshold')
-        temperature_threshold_str = config.get('remove_beyond_threshold', 'temperature_threshold')
+        # Thresholds
+        horizontal_threshold = config.getfloat('remove_beyond_threshold', 'horizontal_threshold')
+        vertical_threshold = config.getfloat('remove_beyond_threshold', 'vertical_threshold')
+        temperature_threshold = config.getfloat('remove_beyond_threshold', 'temperature_threshold')
 
+        # Despiking
         despiking_method = config.get('despiking', 'despiking_method')
-        window_length_despiking = config.get('despiking', 'window_length_despiking')
-        max_length_spike = config.get('despiking', 'max_length_spike')
-        max_iterations = config.get('despiking', 'max_iterations')
-        c_H = config.get('despiking', 'c_H')
-        c_V = config.get('despiking', 'c_V')
-        c_T = config.get('despiking', 'c_T')
-        c_robust = config.get('despiking', 'c_robust')
+        window_length_despiking = config.getfloat('despiking', 'window_length_despiking')
+        max_length_spike = config.getint('despiking', 'max_length_spike')
+        max_iterations = config.getint('despiking', 'max_iterations')
+        c_H = config.getfloat('despiking', 'c_H')
+        c_V = config.getfloat('despiking', 'c_V')
+        c_T = config.getfloat('despiking', 'c_T')
+        c_robust = config.getfloat('despiking', 'c_robust')
 
-        window_length_averaging = config.get('averaging', 'window_length_averaging')
+        # Averaging
+        window_length_averaging = config.getfloat('averaging', 'window_length_averaging')
 
+        # Rotation
         reference_frame = config.get('rotation', 'reference_frame')
-        azimuth = config.get('rotation', 'azimuth')
+        azimuth = config.getfloat('rotation', 'azimuth')
 
     except configparser.NoSectionError as e:
         raise configparser.NoSectionError(e.section) from e
     except configparser.NoOptionError as e:
         raise configparser.NoOptionError(e.option, e.section) from e
-    
-    
-    # control over passed sampling frequency
-    try:
-        sampling_freq = float(sampling_freq_str)
     except ValueError as e:
-        raise ValueError(f"'sampling_freq' must be a float-compatible number, got '{sampling_freq_str}' instead.") from e
-    
-    # control over model
+        raise ValueError(f"Invalid type in config file: {e}") from e
+
+    # Validations
     allowed_models = ['RM_YOUNG_81000', 'CAMPBELL_CSAT3']
     if model not in allowed_models:
-        raise ValueError(f"Invalid input for 'model': '{model}'. "
-                         f"Allowed values are: {allowed_models}")
-    
-    # control over passed thresholds
-    try:
-        horizontal_threshold = float(horizontal_threshold_str)
-        vertical_threshold = float(vertical_threshold_str)
-        temperature_threshold = float(temperature_threshold_str)
-    except ValueError as e:
-        raise ValueError(
-            "Threshold values must be numbers.\n"
-            f"Got: horizontal='{horizontal_threshold_str}', vertical='{vertical_threshold_str}', temperature='{temperature_threshold_str}'"
-        ) from e
-    
-    # control over despiking_method
+        raise ValueError(f"Invalid input for 'model': '{model}'. Allowed values: {allowed_models}")
+
     allowed_methods = ['VM97', 'robust']
     if despiking_method not in allowed_methods:
-        raise ValueError(f"Invalid value for 'despiking_method': '{despiking_method}'. "
-                         f"Allowed values are: {allowed_methods}")
-    
-    # control over passed inputs for despiking procedure
-    try:
-        window_length_despiking = float(window_length_despiking)
-        max_length_spike = int(max_length_spike)
-        max_iterations = int(max_iterations)
-    except ValueError as e:
-        raise ValueError(
-            "window_length_despiking, max_length_spike and max_iterations must be numbers.\n"
-            f"Got: window_length_despiking='{window_length_despiking}', max_length_spike='{max_length_spike}' and max_iterations='{max_iterations}'"
-        ) from e
-    try:
-        c_H = float(c_H)
-        c_V = float(c_V)
-        c_T = float(c_T)
-        c_robust = float(c_robust)
-    except ValueError as e:
-        raise ValueError(
-            "c_H, c_V, c_T and c_robust must be numbers.\n"
-            f"Got: c_H='{c_H}', c_V='{c_V}', c_T='{c_T}', c_robust='{c_robust}'"
-        ) from e
-    
-    # control over passed inputs for averaging procedure
-    try:
-        window_length_averaging = float(window_length_averaging)
-    except ValueError as e:
-        raise ValueError(
-            "window_length_averaging must be a float-compatible input.\n"
-            f"Got: window_length_averaging='{window_length_averaging}' "
-        ) from e
-    
-    # control over reference_frame
+        raise ValueError(f"Invalid 'despiking_method': '{despiking_method}'. Allowed values: {allowed_methods}")
+
     allowed_reference_frames = ['LEC', 'streamline']
     if reference_frame not in allowed_reference_frames:
-        raise ValueError(f"Invalid input for 'reference_frame': '{reference_frame}'. "
-                         f"Allowed values are: {allowed_reference_frames}")
-    
-    # control over azimuth
-    try:
-        azimuth = float(azimuth)
-    except ValueError as e:
-        raise ValueError(
-            "azimuth must be an angle in degrees.\n"
-            f"Got: azimuth='{azimuth}' "
-        ) from e
+        raise ValueError(f"Invalid 'reference_frame': '{reference_frame}'. Allowed values: {allowed_reference_frames}")
 
     if not (0 <= azimuth <= 360):
-        raise ValueError(
-            "azimuth must be between 0 and 360 degrees.\n"
-            f"Got: azimuth={azimuth}"
-    )
+        raise ValueError(f"azimuth must be between 0 and 360. Got: {azimuth}")
 
-    params = {
+    return {
         'rawdata_path': rawdata_path,
         'dir_out': dir_out,
         'sampling_freq': sampling_freq,
-        'model' : model,
+        'model': model,
         'horizontal_threshold': horizontal_threshold,
         'vertical_threshold': vertical_threshold,
         'temperature_threshold': temperature_threshold,
         'despiking_method': despiking_method,
-        'window_length_despiking' : window_length_despiking,
-        'max_length_spike' : max_length_spike,
-        'max_iterations' : max_iterations,
-        'c_H' : c_H,
-        'c_V' : c_V,
-        'c_T' : c_T,
-        'c_robust' : c_robust,
+        'window_length_despiking': window_length_despiking,
+        'max_length_spike': max_length_spike,
+        'max_iterations': max_iterations,
+        'c_H': c_H,
+        'c_V': c_V,
+        'c_T': c_T,
+        'c_robust': c_robust,
         'window_length_averaging': window_length_averaging,
         'reference_frame': reference_frame,
-        'azimuth' : azimuth,
+        'azimuth': azimuth,
     }
-
-
-    return params
-
-
 
 def import_data(path : str) -> pd.DataFrame:
 

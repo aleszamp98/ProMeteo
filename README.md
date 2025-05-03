@@ -18,8 +18,6 @@ ProMeteo is capable of:
 - Interpolating missing or removed values to obtain a continuous time series.
 - Calculating wind direction from wind components in the intrinsic reference system of the sonic anemometer.
 - Performing coordinate rotation into the streamline reference frame (as defined by Finnigan).
-- Calculating first- (e.g. mean, fluctuations) and second-order statistics (e.g. variances, turbulent fluxes, TKE).
-- Visualizing processed data in a simple and efficient way.
 
 ---
 

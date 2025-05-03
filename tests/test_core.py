@@ -1,72 +1,207 @@
 import pytest
-from numpy.testing import assert_array_equal, assert_almost_equal
+from numpy.testing import assert_almost_equal
+import tempfile
+import textwrap
+import configparser
 import pandas as pd
 import numpy as np
-import sys
-import os
-# sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-# import src.core as core
 import core
+import configparser
+
+#######################################################################
+#################### testing core.load_config() #######################
+#######################################################################
 
 
-##### testing core.load_config() #####
+def write_config_file(content: str) -> str:
+    """
+    Writes a given content to a temporary configuration file and returns its file path.
 
-# def write_config_file(tmp_path, content: str):
-#     config_file = tmp_path / "config.txt"
-#     config_file.write_text(content)
-#     return config_file
+    This helper function creates a temporary file, writes the provided content into it,
+    and ensures the file is flushed to disk. The file is not deleted after use, and its
+    file path is returned for further processing.
 
-# def test_valid_config(tmp_path):
-#     content = """
-#     [general]
-#     rawdata_path = ./data.csv
-#     dir_out = ./output/
-#     sampling_freq = 20
-#     """
-#     config_path = write_config_file(tmp_path, content)
-#     params = core.load_config(config_path)
-#     assert params['sampling_freq'] == 20
-#     assert isinstance(params['rawdata_path'], str)
-#     assert isinstance(params['dir_out'], str)
+    Parameters
+    ----------
+    content : str
+        The content to be written to the temporary config file. It is expected
+        to be a string, typically in INI or config format.
 
-# def test_missing_section(tmp_path):
-#     content = """
-#     [wrong_section]
-#     rawdata_path = ./data.csv
-#     dir_out = ./output/
-#     sampling_freq = 10
-#     """
-#     config_path = write_config_file(tmp_path, content)
-#     with pytest.raises(configparser.NoSectionError):
-#         core.load_config(config_path)
+    Returns
+    -------
+    str
+        The file path of the temporary configuration file that has been created.
+    """
+    tmp = tempfile.NamedTemporaryFile(mode='w+', delete=False)
+    tmp.write(textwrap.dedent(content))
+    tmp.flush()
+    return tmp.name
 
-# def test_missing_option(tmp_path):
-#     content = """
-#     [general]
-#     rawdata_path = ./data.csv
-#     # dir_out missing
-#     sampling_freq = 10
-#     """
-#     config_path = write_config_file(tmp_path, content)
-#     with pytest.raises(configparser.NoOptionError):
-#         core.load_config(config_path)
+# --- Valid config ---
+valid_config = """
+[general]
+rawdata_path = ./data
+dir_out = ./output
+sampling_freq = 20.0
+model = RM_YOUNG_81000
 
-# def test_invalid_type(tmp_path):
-#     content = """
-#     [general]
-#     rawdata_path = ./data.csv
-#     dir_out = ./output/
-#     sampling_freq = ten
-#     """
-#     config_path = write_config_file(tmp_path, content)
-#     with pytest.raises(ValueError, match="sampling_freq.*integer"):
-#         core.load_config(config_path)
+[remove_beyond_threshold]
+horizontal_threshold = 2.0
+vertical_threshold = 1.5
+temperature_threshold = 0.5
 
-# def test_config_read_empty(tmp_path):
-#     config_path = tmp_path / "config_missing.txt"
-#     config = configparser.ConfigParser()
-#     read_files = config.read(config_path)
-#     assert read_files == []  # Deve restituire una lista vuota
+[despiking]
+despiking_method = robust
+window_length_despiking = 3.0
+max_length_spike = 10
+max_iterations = 5
+c_H = 1.0
+c_V = 1.0
+c_T = 1.0
+c_robust = 1.5
+
+[averaging]
+window_length_averaging = 10.0
+
+[rotation]
+reference_frame = LEC
+azimuth = 90.0
+"""
+# --- Valid config test ---
+def test_valid_config():
+    """Test for a valid configuration file."""
+    # Arrange: Write a valid config file
+    path = write_config_file(valid_config)
+    
+    # Act: Load the config file using the core function
+    result = core.load_config(path)
+    
+    # Assert: Check if the result is a dictionary
+    assert isinstance(result, dict)
+    
+    # Assert: Verify specific config values
+    assert result['model'] == 'RM_YOUNG_81000'
+    assert result['sampling_freq'] == 20.0
+    assert result['azimuth'] == 90.0
+
+
+# --- Error handling tests ---
+
+def test_file_not_found():
+    """Test if FileNotFoundError is raised for a non-existent file."""
+    # Act & Assert: Check if importing a non-existent file raises FileNotFoundError
+    with pytest.raises(FileNotFoundError):
+        core.load_config("non_existent.ini")
+
+
+def test_missing_section():
+    """Test if a missing section in the config raises a NoSectionError."""
+    # Arrange: Create a config with a missing section
+    config = """
+    [general]
+    rawdata_path = ./data
+    dir_out = ./output
+    sampling_freq = 20.0
+    model = RM_YOUNG_81000
+    """
+    path = write_config_file(config)
+    
+    # Act & Assert: Check if NoSectionError is raised for missing section
+    with pytest.raises(configparser.NoSectionError):
+        core.load_config(path)
+
+
+def test_missing_option():
+    """Test if a missing option in a section raises a NoOptionError."""
+    # Arrange: Create a config with a missing option
+    config = """
+    [general]
+    dir_out = ./output
+    sampling_freq = 20.0
+    model = RM_YOUNG_81000
+
+    [remove_beyond_threshold]
+    horizontal_threshold = 2.0
+    vertical_threshold = 1.5
+    temperature_threshold = 0.5
+
+    [despiking]
+    despiking_method = robust
+    window_length_despiking = 3.0
+    max_length_spike = 10
+    max_iterations = 5
+    c_H = 1.0
+    c_V = 1.0
+    c_T = 1.0
+    c_robust = 1.5
+
+    [averaging]
+    window_length_averaging = 10.0
+
+    [rotation]
+    reference_frame = LEC
+    azimuth = 90.0
+    """
+    path = write_config_file(config)
+    
+    # Act & Assert: Check if NoOptionError is raised for missing option
+    with pytest.raises(configparser.NoOptionError):
+        core.load_config(path)
+
+
+def test_invalid_model():
+    """Test if an invalid model raises a ValueError."""
+    # Arrange: Create a config with an invalid model
+    config = valid_config.replace("RM_YOUNG_81000", "INVALID_MODEL")
+    path = write_config_file(config)
+    
+    # Act & Assert: Check if ValueError is raised for invalid model
+    with pytest.raises(ValueError, match="Invalid input for 'model'"):
+        core.load_config(path)
+
+
+def test_invalid_despiking_method():
+    """Test if an invalid despiking method raises a ValueError."""
+    # Arrange: Create a config with an invalid despiking method
+    config = valid_config.replace("robust", "not_valid_method", 1)
+    path = write_config_file(config)
+    
+    # Act & Assert: Check if ValueError is raised for invalid despiking method
+    with pytest.raises(ValueError, match="Invalid 'despiking_method'"):
+        core.load_config(path)
+
+
+def test_invalid_reference_frame():
+    """Test if an invalid reference frame raises a ValueError."""
+    # Arrange: Create a config with an invalid reference frame
+    config = valid_config.replace("LEC", "BAD_FRAME")
+    path = write_config_file(config)
+    
+    # Act & Assert: Check if ValueError is raised for invalid reference frame
+    with pytest.raises(ValueError, match="Invalid 'reference_frame'"):
+        core.load_config(path)
+
+
+def test_azimuth_out_of_bounds():
+    """Test if an azimuth out of bounds raises a ValueError."""
+    # Arrange: Create a config with an invalid azimuth value
+    config = valid_config.replace("90.0", "361.0")
+    path = write_config_file(config)
+    
+    # Act & Assert: Check if ValueError is raised for azimuth out of bounds
+    with pytest.raises(ValueError, match="azimuth must be between 0 and 360"):
+        core.load_config(path)
+
+
+def test_invalid_type_in_config():
+    """Test if an invalid type in the config raises a ValueError."""
+    # Arrange: Create a config with an invalid type for sampling_freq
+    config = valid_config.replace("20.0", "not_a_float", 1)  # invalid float for sampling_freq
+    path = write_config_file(config)
+    
+    # Act & Assert: Check if ValueError is raised for invalid type
+    with pytest.raises(ValueError, match="Invalid type in config file"):
+        core.load_config(path)
 
 #######################################################################
 ################## testing core.import_data() #########################

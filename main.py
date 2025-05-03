@@ -9,8 +9,7 @@ import logging
 # ProMeteo Modules
 import src.core as core
 import src.pre_processing as pre_processing
-import src.reynolds as reynolds
-import src.plotting as plotting
+import src.frame as frame
 
 
 # configuration-file path (meant to be in the "config/" folder)
@@ -212,13 +211,13 @@ wind_averaged = np.full((3, len(data_interp)), 0.0)
 
 if reference_frame == "LEC":
     # ROTATION TO LEC (Local Earth Coordinate) System, given the type and azimuth of the instrument
-    wind_rotated = pre_processing.rotation_to_LEC_reference(wind,
+    wind_rotated = frame.rotation_to_LEC_reference(wind,
                                                             azimuth,
                                                             model)
     for i, component in enumerate(['u','v','w']):
         wind_averaged[i,:],_ = core.running_stats(wind_rotated[i,:], # LEC wind components necessary in the wind_direction computation
                                                   window_length_averaging_points)
-    wind_direction = pre_processing.wind_dir_LEC_reference(wind_averaged[0,:],
+    wind_direction = frame.wind_dir_LEC_reference(wind_averaged[0,:],
                                                            wind_averaged[1,:]) # only horizontal components in LEC system needee
     
     # maintain in memory the wind_averaged array cause is necessary to the next step: reynolds decomposition
@@ -230,9 +229,9 @@ elif reference_frame == "streamline":
     for i, component in enumerate(['u','v','w']):
         wind_averaged[i,:],_ = core.running_stats(data_interp[component].to_numpy(), # non rotated wind components necessary in the wind_direction computation
                                                   window_length_averaging_points)
-    wind_rotated = pre_processing.rotation_to_streamline_reference(wind, # model indipendent
+    wind_rotated = frame.rotation_to_streamline_reference(wind, # model indipendent
                                                                    wind_averaged)
-    wind_direction = pre_processing.wind_dir_modeldependent_reference(wind_averaged[0,:],
+    wind_direction = frame.wind_dir_modeldependent_reference(wind_averaged[0,:],
                                                                       wind_averaged[1,:],
                                                                       azimuth,
                                                                       model) # model dependent computation
@@ -256,37 +255,6 @@ logger.info(f"""
             Rotated wind components saved.
             """)
 
-###################################################################################################
-###################################################################################################
-###################################################################################################
-###################################################################################################
-###################################################################################################
-
-# reynolds decomposition => 
-# new dataframe containing mean(u), mean(v), mean(w), mean(T_s), mean(wind_dir), 
-# (u', v', w', T_s')
-# u'u', v'v', w'w', TKE, u'w', w'T'
-
-# create dataframe for mean variables "data_first_order"
-# create dataframe for second order variables "data_second_order"
-
-# if reference_frame == "streamline":
-#     #compute wind averaged in the streamline reference
-#     wind_averaged = np.full( (3, len(data_interp)), np.nan)
-#     for i, component in enumerate(['u','v','w']):
-#         wind_averaged[i,:],_ = core.running_stats(wind_rotated[i,:],
-#                                                 )
-# elif reference_frame == "LEC":
-#     # wind averaged already computed in the rotation step
-#     pass
-
-# stats computation...
-
-
-###################################################################################################
-###################################################################################################
-###################################################################################################
-###################################################################################################
-###################################################################################################
-
-# variables plotting
+#######################################################################
+#######################################################################
+#######################################################################
