@@ -162,7 +162,8 @@ def min_to_points(minutes: int,
                   ) -> int:
     """
     Computes the number of data points contained in a signal of known sampling frequency
-    given the time lenght in minutes.
+    given the time length in minutes, ensuring that the result is always an odd number,
+    unless the result is 0, in which case it returns 0.
 
     Parameters
     ----------
@@ -174,9 +175,14 @@ def min_to_points(minutes: int,
     Returns
     -------
     n_points : int
-        Total number of data points in the signal for the given duration.
+        Total number of data points in the signal for the given duration, adjusted to be odd if necessary.
+        Returns 0 if the result is zero.
     """
     n_points = sampling_freq * minutes * 60
+    if n_points == 0:
+        pass  # Keep n_points as 0
+    elif n_points % 2 == 0:  # If n_points is even, add 1 to make it odd
+        n_points += 1
     return int(n_points)
 
 def running_stats(array: np.ndarray, 

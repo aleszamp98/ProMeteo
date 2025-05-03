@@ -101,8 +101,6 @@ logger.info(f"""
 
 window_length_despiking_points = core.min_to_points(sampling_freq, 
                                                     window_length_despiking)
-if window_length_despiking_points % 2 == 0:
-    window_length_despiking_points += 1
 
 data_despiked = pd.DataFrame(index=data_cleaned.index, columns=data_cleaned.columns)
 
@@ -194,8 +192,6 @@ logger.info(f"""
 
 window_length_averaging_points = core.min_to_points(sampling_freq, 
                                                     window_length_averaging)
-if window_length_averaging_points % 2 == 0:
-    window_length_averaging_points += 1
 
 logger.info(f"""
             Rotation to {reference_frame} reference frame

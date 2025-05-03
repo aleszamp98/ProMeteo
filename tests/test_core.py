@@ -264,11 +264,32 @@ def test_import_data_invalid_timestamps(tmp_path):
 
 def test_min_to_points():
     # Act & Assert: check the conversion of minutes to points for different cases
-    assert core.min_to_points(1, 1) == 60  # 1 min, 1 Hz
-    assert core.min_to_points(10, 1) == 600  # 10 min, 1 Hz
-    assert core.min_to_points(5, 2) == 600  # 5 min, 2 Hz
-    assert core.min_to_points(10, 0) == 0  # 10 min, 0 Hz
-    assert core.min_to_points(0, 1) == 0  # 0 min, 1 Hz
+    
+    # 1 min, 1 Hz -> 60 points (even), so should return 61
+    assert core.min_to_points(1, 1) == 61  
+    # 10 min, 1 Hz -> 600 points (even), so should return 601
+    assert core.min_to_points(10, 1) == 601  
+    # 5 min, 2 Hz -> 600 points (even), so should return 601
+    assert core.min_to_points(5, 2) == 601  
+    # 10 min, 0 Hz -> 0 points (even), so should return 0
+    assert core.min_to_points(10, 0) == 0  
+    # 0 min, 1 Hz -> 0 points (even), so should return 0
+    assert core.min_to_points(0, 1) == 0  
+    # 1 min, 2 Hz -> 120 points (even), so should return 121
+    assert core.min_to_points(1, 2) == 121  
+    # 0 min, 0 Hz -> 0 points (even), so should return 0
+    assert core.min_to_points(0, 0) == 0  
+    # 3 min, 5 Hz -> 900 points (odd), so should return 901
+    assert core.min_to_points(3, 5) == 901  
+    # 2 min, 3 Hz -> 360 points (even), so should return 361
+    assert core.min_to_points(2, 3) == 361  
+    # 1 min, 1 Hz -> 60 points (even), so should return 61
+    assert core.min_to_points(1, 1) == 61  # Ensuring repeated case works
+    # 0 min, 0 Hz -> 0 points, edge case
+    assert core.min_to_points(0, 0) == 0  # Should return 0
+    # 0 min, 0 Hz -> 0 points, but still ensuring it works
+    assert core.min_to_points(0, 0) == 0
+
 
 ######################################################################
 ################## testing core.running_stats() ######################
