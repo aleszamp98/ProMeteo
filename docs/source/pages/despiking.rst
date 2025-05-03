@@ -1,7 +1,24 @@
 Despiking
 =========
 
-Questa pagina descrive la funzione speciale chiamata `nome_funzione`, che è utilizzata per...
+Despiking: identifies and corrects spikes in the data.
 
-Descrizione dettagliata della funzione.
+Two methods:
 
+VM97 (Vickers & Mahrt, 1997):
+
+Iterative.
+
+Spikes identified using mean and standard deviation.
+
+Short isolated anomalies are replaced via interpolation.
+
+Robust (custom):
+
+Non-iterative.
+
+Spikes identified via median and interquartile range.
+
+Faster on long time series.
+
+NaNs (from threshold removal or missing data) are linearly interpolated at the end.
