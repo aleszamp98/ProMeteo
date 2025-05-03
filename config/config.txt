@@ -37,5 +37,5 @@ azimuth = 0
 
 
 [averaging]
-# length in [min] of the moving window to compute the mean horizontal wind components, wind direction and the reynolds decomposition
+# length in [min] of the moving window to compute the average of wind components.
 window_length_averaging = 5

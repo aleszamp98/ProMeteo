@@ -1,8 +1,6 @@
 # External Modules
 import numpy as np
 import pandas as pd
-import matplotlib as plt
-import sys
 import os
 import logging
 
