@@ -1,24 +1,134 @@
 Despiking
 =========
 
-Despiking: identifies and corrects spikes in the data.
+Data spikes can be caused by random electronic spikes in the monitoring or recording systems, 
+as might occur during precipitation when water collects on the transducers of sonic anemometers. 
+These spikes are unwanted outliers that can strongly affect the computation of averages 
+and derived fluxes, and should therefore be removed. Unlike clearly non-physical outliers, 
+which can often be identified using fixed thresholds (e.g., wind speeds exceeding 50 m/s 
+when values no greater than 10 m/s are expected under certain conditions), 
+spikes cannot be reliably detected with a single predefined threshold. 
+For this reason, it is necessary to adopt moving-window-based methods, 
+where thresholds are dynamically computed based on the local mean or median 
+and on an acceptable range determined by the variability of the time series 
+around a specific time point.
 
-Two methods:
+The despiking procedure is useful to filter unwanted spikes, 
+i.e. a single or a small group of data points characterised 
+by a magnitude too different compared to the data distribution. 
+The despiking ensures that the averaging procedure will not be 
+affected by these spikes. The presence of spikes in the measured 
+variables can also increase the error of the derived quantities.
 
-VM97 (Vickers & Mahrt, 1997):
+The ProMeteo library implements two despiking procedures to identify and replace these spikes: 
+one based on the method described by Vickers and Mahrt [Vickers1997]_, and another, simpler, 
+based on robust statistical metrics. 
+These are available as functions in the ``pre_processing`` module:
 
-Iterative.
+- ``pre_processing.despiking_VM97()`` for the Vickers and Mahrt (1997) method,
+- ``pre_processing.despiking_robust()`` for the custom "robust" method.
 
-Spikes identified using mean and standard deviation.
+The script ``main.py`` executes one of the two available methods based 
+on the ``despiking_method`` parameter ("VM97" or "robust") specified in the configuration file ``config/config.txt``.
 
-Short isolated anomalies are replaced via interpolation.
 
-Robust (custom):
+Vickers and Mahrt (1997) Method
+-------------------------------
 
-Non-iterative.
+The despiking procedure is similar to the one described in Vickers and Mahrt [Vickers1997]_. 
+This method assumes that each interval within the dataset follows a Gaussian distribution of independent data 
+characterised by mean (:math:`\mu`) and standard deviation (:math:`\sigma`).
+The method uses a centred moving window of size :math:`N`, defined by the parameter ``window_length``, 
+to compute two thresholds called ``upper_bound`` and ``lower_bound``.
+The window is moved along the time series, and at each step, the mean and standard deviation are computed.
 
-Spikes identified via median and interquartile range.
+.. math::
 
-Faster on long time series.
+    \mu = \frac{1}{N} \sum_i^N \zeta_i \quad
+    \sigma = \sqrt{ \frac{1}{N} \sum_i^N (\zeta_i - \mu)^2 } ,
 
-NaNs (from threshold removal or missing data) are linearly interpolated at the end.
+The upper and lower bounds are defined as:
+
+.. math::
+
+    upper(lower)_{bound} = \mu \pm c \cdot \sigma,
+
+where :math:`c` is a user-defined parameter that determines the width around 
+the mean within which values are considered acceptable.
+
+Values exceeding :math:`upper(lower)_{bound}` are identified as spikes.
+Only sequences of consecutive spikes with a length up to the parameter ``max_consecutive_spikes`` are replaced.
+Each spike is replaced by linear interpolation from its closest neighbors, when possible.
+The process is repeated iteratively, increasing :math:`c` by 0.1 at each iteration, 
+until no further spikes are detected or the maximum number of iterations is reached.
+The maximum number of iterations is defined by the parameter ``max_iterations``.
+
+The method is applied by the ``main.py`` script separately to each variable, 
+using the corresponding ``c`` factors specified in the configuration file:
+
+- horizontal wind components (:math:`u`, :math:`v`): parameter ``c_H``,
+- vertical wind component (:math:`w`): parameter ``c_V``,
+- sonic temperature (:math:`T_s`): parameter ``c_T``.
+
+It is recommended to use:
+
+- A window of 5 minutes for 20Hz data or 30 minutes for 1Hz data
+- :math:`c = 3.5` for horizontal wind components (:math:`u`, :math:`v`) and sonic temperature (:math:`T_s`)
+- :math:`c = 5` for vertical wind component (:math:`w`) due to its smaller magnitude and higher variability.
+
+So, in this method "spikes" are defined as:
+
+- A single point or a sequence of up to ``max_consecutive_spikes`` consecutive points.
+
+The function ``pre_processing.despiking_VM97()`` uses ``core.running_stats()`` to compute 
+the moving average and variance over a sliding window. It then calculates the corresponding 
+upper and lower bounds and uses them to create a mask of candidate spikes (the ones exceeding these thresholds).
+
+This mask is passed to the function ``pre_processing.identify_interp_spikes()``, which identifies sequences of consecutive 
+spikes that do not exceed the maximum allowed length, discarding those that are too long.
+
+For the remaining valid spikes, interpolation is performed using ``pre_processing.linear_interp()``, 
+but only when the nearest neighbors are non-NaN values and the spike is not located near the edges of the time series.
+
+"Robust" Method
+---------------
+
+This method is based on robust statistics and does not assume Gaussianity. 
+It is designed to be non-iterative and thus computationally faster.
+
+The method uses a centred moving window of size :math:`N`, defined by the parameter ``window_length``, 
+to compute two thresholds called ``upper_bound`` and ``lower_bound``.
+The window is moved along the time series, and at each step,
+the median :math:`\tilde{\mu}` and the interquartile range :math:`\tilde{\sigma}` are computed:
+
+.. math::
+
+    \tilde{\mu} = \text{median} \quad
+    \tilde{\sigma} = \frac{q_{84} - q_{16}}{2},
+
+where :math:`q_{84}` and :math:`q_{16}` are the 84th and 16th percentiles.
+
+The upper and lower bounds are defined as:
+
+.. math::
+
+    upper(lower)_{bound} = \max\left\{ \tilde{\mu} \pm c \cdot \tilde{\sigma},\ 0.5 \right\}.
+
+Outliers (isolated points or sequences greater than :math:`upper_{bound}` or lower than :math:`lower_{bound})` 
+are considered spikes. They are replaced by the median value computed over the same window.
+
+The :math:`c` factor is defined in the configuration file as ``c_robust``.
+The same recommendations as for the Vickers and Mahrt method apply.
+
+The function ``pre_processing.robust()`` calls ``core.running_stats_robust()`` to compute robust statistics 
+over a sliding window. It then calculates the corresponding ``upper_bound`` and ``lower_bound`` values.
+
+A mask is created to identify all data points falling outside these bounds. 
+These values are then replaced with the corresponding entries from the time series of moving medians.
+
+
+References
+----------
+
+.. [Vickers1997] Vickers, D., & Mahrt, L. (1997). *Quality Control and Flux Sampling Problems for Tower and Aircraft Data*. Journal of Atmospheric and Oceanic Technology, 14(3), 512–526. https://doi.org/10.1175/1520-0426(1997)014<0512:QCAFSP>2.0.CO;2
+

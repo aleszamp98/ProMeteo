@@ -5,18 +5,60 @@ Welcome to ProMeteo
 It is structured into three modules:
 
 - ``core`` for importing the raw data and the configuration file and computing basic statistics on sliding window.
-- ``pre_processing``: for cleaning raw time series.
+- ``pre_processing``: for uniforming and cleaning raw time series.
 - ``frame``: for rotating wind data and computing wind direction.
 
-Execution is managed via the main script: ``main.py`` in the main directory.
+To run **ProMeteo**, you first need to clone the repository to a local directory using one of the standard GitHub cloning methods.
+
+Using HTTPS:
+
+.. code-block:: bash
+
+    git clone https://github.com/aleszamp98/ProMeteo.git
+
+Or using SSH:
+
+.. code-block:: bash
+
+    git clone git@github.com:aleszamp98/ProMeteo.git
+
+Once cloned, you can either place your data files in the ``/data`` subdirectory, 
+or specify a custom data source path in the configuration file located at ``/config/config.txt`` 
+by setting the ``rawdata_path`` parameter accordingly.
+
+Execution is managed via the main script ``main.py``, which should be run from the root directory of the project using the following command:
+
+.. code-block:: bash
+
+    python3 main.py
+
+This will execute the script, which will read the configuration file located in the ``/config`` subdirectory.
 
 Requirements
 ------------
-Prometeo is compatible with Python 3.7 and above.
-Prometeo requires the following Python libraries:
+
+Before running the script, make sure the following Python dependencies are installed:
 
 - ``numpy``
 - ``pandas``
+
+You can install them using ``pip``:
+
+.. code-block:: bash
+
+    pip install numpy pandas
+
+or by using a package manager like ``conda`` if you are using the Anaconda distribution.
+
+Supported Anemometers
+----------------------
+**ProMeteo** currently supports the processing of time series data from the following sonic anemometer models:
+
+- RM Young 81000: `Official Manual <https://www.youngusa.com/wp-content/uploads/2008/01/81000-9028I29.pdf>`_
+- Campbell CSAT3: `Official Manual <https://s.campbellsci.com/documents/us/manuals/csat3.pdf>`_
+
+It handles the three wind components defined in each manufacturer's proprietary Cartesian coordinate system,  
+as well as the time series of sonic temperature.
 
 Input and Output
 ----------------
@@ -35,13 +77,6 @@ Input and Output
 - ``preprocessed_rotated_data.csv``: `.csv` file containing *Time*, *u*, *v*, *w*, *T_s*, *wind_dir* columns. 
    These columns represent the preprocessed and rotated wind components with horizontal wind direction in degrees (with respect to the North).
 
-Supported Anemometers
-----------------------
-
-**ProMeteo** currently supports the following sonic anemometer models:
-
-- RM Young 81000: `Official Manual <https://www.youngusa.com/wp-content/uploads/2008/01/81000-9028I29.pdf>`_
-- Campbell CSAT3: `Official Manual <https://s.campbellsci.com/documents/us/manuals/csat3.pdf>`_
 
 Main Script Workflow
 --------------------
@@ -126,9 +161,10 @@ Design Notes
 
 - Functions are modular and can be reused outside ``main.py``.
 - Preprocessing sequence is important:
-- Threshold filtering precedes despiking to avoid bias in statistical thresholds.
-- NaN interpolation is performed last to ensure continuity before rotation.
-- Only wind components (``u, v, w``) are rotated.
+
+   - Threshold filtering precedes despiking to avoid bias in statistical thresholds.
+   - NaN interpolation is performed last to ensure continuity before rotation.
+   - `T_s` is not rotated, as it is not a wind component.
 
 Testing
 -------
@@ -150,7 +186,7 @@ Contributing
 
 - Open an issue for bugs or feature requests
 - Submit a pull request to contribute code or improvements
-- Or contact me directly via email (see GitHub profile page)
+- Or contact me directly (`see GitHub profile page <https://github.com/aleszamp98>`_)
 
 How to Cite
 -----------
@@ -167,3 +203,17 @@ If you use **ProMeteo** in a publication or presentation, please cite it as:
      url          = {https://github.com/aleszamp98/ProMeteo.git}
    }
 
+Planned Features
+----------------
+
+Future versions of Prometeo will include:
+
+- Implementation of Reynolds decomposition.
+- Computation of derived atmospheric variables such as:
+  
+  - Richardson number.
+  - Brunt–Väisälä frequency.
+
+- Wavelet analysis of time series.
+
+Stay tuned for updates!

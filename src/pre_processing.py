@@ -226,8 +226,10 @@ def despiking_VM97(array_to_despike: np.ndarray,
     by `c` times the local standard deviation from the local mean are considered spikes. Spikes are 
     replaced using interpolation if their number is below `max_consecutive_spikes`.
 
-    The threshold `c` is incrementally increased after each iteration.
+    The `c` factor is incrementally increased after each iteration.
     The process stops when no more spikes are detected or when `max_iterations` is reached.
+
+    The function calls `pre_processing.identify_inter_spikes()` and `core.running_stats()` functions.
 
     Parameters
     ----------
@@ -326,12 +328,12 @@ def despiking_robust(array_to_despike: np.ndarray,
     and a robust estimate of the local variability, computed over a moving window. A point is classified 
     as a spike if it lies outside a dynamic threshold defined by `c` times the robust standard deviation 
     added to and subtracted from the running median. The robust standard deviation is defined as half the
-    inter-percentile range between the 84th and 16th percentiles within the moving window:
-    
-    robust_std = (P84 - P16) / 2
+    inter-percentile range between the 84th and 16th percentiles within the moving window.
 
     Detected spikes are replaced with the corresponding value of the running median. 
     This procedure is applied in a single pass and does not perform iterative refinement.
+
+    The function calls `core.running_stats_robust()` function.
 
     Parameters
     ----------
