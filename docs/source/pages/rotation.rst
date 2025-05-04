@@ -4,7 +4,7 @@ Frame rotation and wind direction
 The **ProMeteo** library processes time series of the wind vector components *u*, *v*, and *w*, 
 which are originally defined in the intrinsic Cartesian coordinate system of the sonic anemometer. 
 These reference frames vary depending on the specific instrument model. 
-A list of supported models is provided in the `welcome page <../pages/welcome>`_.
+A list of supported models is provided in the :ref:`welcome page <welcome-page>`.
 
 ProMeteo provides tools to:
 

@@ -1,3 +1,5 @@
+.. _welcome-page:
+
 Welcome to ProMeteo
 ===================
 
