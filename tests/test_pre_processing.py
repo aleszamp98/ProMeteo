@@ -5,9 +5,9 @@ import pandas as pd
 import numpy as np
 import logging
 from unittest.mock import MagicMock
-# sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-# import src.core as core
-# import src.pre_processing as pre_processing
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../src')))
 import pre_processing
 import core
 

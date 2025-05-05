@@ -2,8 +2,10 @@ import pandas as pd
 import numpy as np
 import logging
 from typing import Tuple, Optional, Union
-# import src.core as core
-import core
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../src')))
+import core as core
 
 def fill_missing_timestamps(data: pd.DataFrame, 
                             freq: float
@@ -320,7 +322,7 @@ def despiking_VM97(array_to_despike: np.ndarray,
 def despiking_robust(array_to_despike: np.ndarray,
                      c: float,
                      window_length: int
-                     ) -> np.ndarray:
+                     ) -> Tuple[np.ndarray, int]:
     """
     Applies a non-iterative despiking algorithm using robust statistics to remove spikes from a time series.
 
