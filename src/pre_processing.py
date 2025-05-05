@@ -7,13 +7,14 @@ import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../src')))
 import core as core
 
-def fill_missing_timestamps(data: pd.DataFrame, 
-                            freq: float
+def fill_missing_timestamps(data : pd.DataFrame, 
+                            freq : float
                             ) -> pd.DataFrame:
     """
-    Ensures a DataFrame with a datetime index includes all timestamps between 
-    the first and last entry, based on the given frequency. Missing timestamps 
-    are added with NaN values for all columns.
+    Returns the input DataFrame data with a complete datetime index: 
+    all timestamps between the first and last entry are included 
+    based on the specified frequency, and missing timestamps are filled 
+    with rows containing NaN values.
 
     Parameters
     ----------
@@ -46,16 +47,16 @@ def fill_missing_timestamps(data: pd.DataFrame,
     
     return complete_data
     
-def remove_beyond_threshold(array: np.ndarray,
-                            threshold: float
+def remove_beyond_threshold(array : np.ndarray,
+                            threshold : float
                             ) -> Tuple[np.ndarray, int]:
     """
-    Replaces all values in the input array that exceed a given absolute threshold with NaN.
+    Replaces all values in the input array that exceed a given absolute `threshold` with NaN.
 
     Parameters
     ----------
     array : np.ndarray
-        A NumPy array of numerical values to be cleaned.
+        The 1D array of numerical values to be cleaned.
     threshold : float
         Absolute threshold. All values with absolute magnitude greater than this will be set to NaN.
 
@@ -87,8 +88,9 @@ def linear_interp(left_value : float,
                   length : int
                   ) -> np.ndarray:
     """
-    Performs linear interpolation between two values (`left_value` and `right_value`)
-    over an array of specified length (`length`).
+    Performs linear interpolation between `left_value` and `right_value`, 
+    returning a NumPy array of length `length` whose elements represent 
+    evenly spaced values between the two endpoints.
     
     Parameters
     ----------
@@ -122,22 +124,22 @@ def linear_interp(left_value : float,
     
     return interpolated_values
 
-def identify_interp_spikes(array: np.ndarray,
-                           mask: np.ndarray,
-                           max_length_spike: int
+def identify_interp_spikes(array : np.ndarray,
+                           mask : np.ndarray,
+                           max_length_spike : int
                            ) -> tuple[np.ndarray, int]:
     """
-    Identifies and interpolates spikes in the provided array based on the given mask.
+    Identifies and interpolates spikes in the provided `array` based on the given mask.
     
     A spike is defined as a sequence of consecutive True values in the mask that is shorter than or equal to
     the specified maximum length (`max_length_spike`). The function applies linear interpolation to replace 
-    the spike values with interpolated ones. If the spike is at the boundary of the array (either at the start
-    or at the end), interpolation is not performed.
+    the spike values with interpolated ones by calling `core.linear_interp()`. If the spike is at the boundary 
+    of the array (either at the start or at the end), interpolation is not performed.
 
     Parameters
     ----------
     array : np.ndarray
-        The array containing the data to be processed.
+        The 1D array containing the data to be processed.
     mask : np.ndarray
         A boolean mask where True values indicate potential spikes.
     max_length_spike : int
@@ -213,11 +215,11 @@ def identify_interp_spikes(array: np.ndarray,
 
 
 
-def despiking_VM97(array_to_despike: np.ndarray,
-                   c: float,
-                   window_length: int,
-                   max_consecutive_spikes: int,
-                   max_iterations: int,
+def despiking_VM97(array_to_despike : np.ndarray,
+                   c : float,
+                   window_length : int,
+                   max_consecutive_spikes : int,
+                   max_iterations : int,
                    logger : Optional[logging.Logger] = None
                    ) -> np.ndarray:
     """
@@ -319,9 +321,9 @@ def despiking_VM97(array_to_despike: np.ndarray,
     return array_despiked
 
 
-def despiking_robust(array_to_despike: np.ndarray,
-                     c: float,
-                     window_length: int
+def despiking_robust(array_to_despike : np.ndarray,
+                     c : float,
+                     window_length : int
                      ) -> Tuple[np.ndarray, int]:
     """
     Applies a non-iterative despiking algorithm using robust statistics to remove spikes from a time series.
@@ -390,11 +392,11 @@ def despiking_robust(array_to_despike: np.ndarray,
     return array_despiked, count_spike
 
 
-def interp_nan(array: np.ndarray
+def interp_nan(array : np.ndarray
                ) -> Tuple[np.ndarray, int]:
     """
     Interpolates NaN values in the input array using linear interpolation.
-    NaNs are replaced with values computed by the `linear_interp` function,
+    NaNs are replaced with values computed by `core.linear_interp()` function,
     using the closest non-NaN values to the left and right as reference points.
     If NaNs are at the edges of the array (i.e., without valid neighbors on both sides),
     they are left unchanged.

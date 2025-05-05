@@ -105,12 +105,57 @@ def rotation_to_LEC_reference(wind : np.ndarray,
     return wind_rotated
 
 
-def rotation_to_streamline_reference(wind: np.ndarray,
-                                     wind_averaged: np.ndarray
+def rotation_to_streamline_reference(wind : np.ndarray,
+                                     wind_averaged : np.ndarray
                                      ) -> np.ndarray:
     """
     Rotate wind velocity components into the streamline coordinate system,
-    following the method of Khaimal and Finnigan (1979).
+    following the method described in Kaimal and Finnigan (1979).
+    
+    The rotation to the streamline frame is performed using the **double rotation** technique,
+    which aims to orient the coordinate system such that the rotated velocity components satisfy:
+
+    .. math::
+
+        \tilde{u} \simeq |\vec{U}|, \quad \tilde{v} \simeq 0, \quad \tilde{w} \simeq 0 \quad .
+
+    The orientation angles of the average wind vector in the instrument’s intrinsic coordinate system are computed as:
+
+    .. math::
+
+        \theta = \arctan\left(\frac{\overline{v}}{\overline{u}}\right), \qquad
+        \phi = \arctan\left(\frac{\overline{w}}{s}\right), \qquad
+        s = \sqrt{\overline{u}^2 + \overline{v}^2};
+
+    These angles are then used to compute the instantaneous rotation matrix that transforms the instantaneous wind components:
+
+    .. math::
+
+        \begin{bmatrix}
+        \tilde{u} \\
+        \tilde{v} \\
+        \tilde{w}
+        \end{bmatrix}
+        =
+        \begin{bmatrix}
+        \cos(\phi)\cos(\theta) & \cos(\phi)\sin(\theta) & \sin(\phi) \\
+        -\sin(\theta) & \cos(\theta) & 0 \\
+        -\sin(\phi)\cos(\theta) & -\sin(\phi)\sin(\theta) & \cos(\phi)
+        \end{bmatrix}
+        \begin{bmatrix}
+        u \\
+        v \\
+        w
+        \end{bmatrix}
+
+    This operation effectively removes the mean crosswind and vertical components from the signal,
+    aligning the flow with the x-axis in the new reference frame.
+
+    In this system:
+
+    - :math:`\tilde{u}` is the *streamwise* velocity component, aligned with the mean horizontal wind;
+    - :math:`\tilde{v}` is the *crosswise* velocity component;
+    - :math:`\tilde{w}` is the *normal-to-the-streamline* velocity component.
 
     Parameters
     ----------
@@ -140,6 +185,15 @@ def rotation_to_streamline_reference(wind: np.ndarray,
     - x-axis with the mean horizontal wind direction,
     - y-axis perpendicular to the x-axis horizontally,
     - z-axis aligned with the mean vertical direction.
+
+    The rotation is most appropriate for stationary signals, where the mean wind vector is well-defined
+    and the assumption of a constant orientation holds.
+
+    References
+    ----------
+    Kaimal, J. C., & Finnigan, J. J. (1979). 
+    Atmospheric Boundary Layer Flows. 
+    Oxford University Press.
     """
     # --- Input validation ---
     if wind.shape[0] != 3 or wind_averaged.shape[0] != 3:
@@ -177,12 +231,12 @@ def rotation_to_streamline_reference(wind: np.ndarray,
 
     return wind_rotated
 
-def wind_dir_LEC_reference(u: Union[np.ndarray, list, float, int], 
-                           v: Union[np.ndarray, list, float, int],
-                           threshold: float = 0.0
+def wind_dir_LEC_reference(u : Union[np.ndarray, list, float, int], 
+                           v : Union[np.ndarray, list, float, int],
+                           threshold : float = 0.0
                            ) -> np.ndarray:
     """
-    Compute wind direction from u and v wind components in a Local Earth Coordinate (LEC) reference system, 
+    Compute wind direction from `u` and `v` wind components defined in a Local Earth Coordinate (LEC) reference system, 
     following the meteorological convention.
 
     Wind direction is defined as:
@@ -190,6 +244,9 @@ def wind_dir_LEC_reference(u: Union[np.ndarray, list, float, int],
     - 90 degrees: wind coming from East
     - 180 degrees: wind coming from South
     - 270 degrees: wind coming from West
+
+    If the wind magnitude is below a specified threshold, the function returns `NaN`.
+
 
     Parameters
     ----------
@@ -203,7 +260,8 @@ def wind_dir_LEC_reference(u: Union[np.ndarray, list, float, int],
     Returns
     -------
     wind_direction : np.ndarray
-        Wind direction in degrees, values between 0° and 360° (0 inclusive, 360 exclusive), or NaN if below threshold.
+        Wind direction in degrees, values between 0° and 360° (0 inclusive, 360 exclusive), 
+        or NaN if wind speed modulus is below the given threshold.
 
     Raises
     ------
@@ -230,21 +288,33 @@ def wind_dir_LEC_reference(u: Union[np.ndarray, list, float, int],
     return wind_direction
 
 
-def wind_dir_modeldependent_reference(u: Union[np.ndarray, list, float, int],
-                                      v: Union[np.ndarray, list, float, int],
-                                      azimuth: float,
-                                      model: str,
-                                      threshold: float = 0.0
+def wind_dir_modeldependent_reference(u : Union[np.ndarray, list, float, int],
+                                      v : Union[np.ndarray, list, float, int],
+                                      azimuth : float,
+                                      model : str,
+                                      threshold : float = 0.0
                                       ) -> np.ndarray:
     """
-    Compute the wind direction based on the model of the anemometer and a custom azimuth.
+    Compute the wind direction based on the horizontal wind components (`u` and `v`), 
+    defined in the proprietary coordinate system of the anemometer specified by the `model` argument. 
+    The anemometer's head is oriented with a given `azimuth` angle with respect to the North.
+
+    The function calculates the wind direction following the meteorological convention.
+
+    Wind direction is defined as:
+    - 0 degrees: wind coming from North
+    - 90 degrees: wind coming from East
+    - 180 degrees: wind coming from South
+    - 270 degrees: wind coming from West . 
+    
+    If the wind magnitude is below a specified threshold, the function returns `NaN`.
 
     Parameters
     ----------
     u : array-like
-        The u-component of the wind (east-west direction).
+        The u-component of the wind (east-west direction) in the anemometer's coordinate system.
     v : array-like
-        The v-component of the wind (north-south direction).
+        The v-component of the wind (north-south direction) in the anemometer's coordinate system.
     azimuth : float
         The azimuth rotation in degrees to adjust the wind direction (e.g., instrument mounting offset).
     model : str
@@ -255,7 +325,8 @@ def wind_dir_modeldependent_reference(u: Union[np.ndarray, list, float, int],
     Returns
     -------
     wind_direction : np.ndarray
-        The wind direction in degrees, with 0° corresponding to North, 90° to East, etc., or NaN if below threshold.
+        The wind direction in degrees, with 0° corresponding to North, 90° to East, etc., 
+        or NaN if wind speed modulus is below the given threshold.
 
     Raises
     ------

@@ -136,6 +136,7 @@ The corresponding rotation matrix is:
    -\sin(\alpha) & \cos(\alpha) & 0 \\
    0 & 0 & 1
    \end{bmatrix}
+   \quad .
 
 This matrix is then applied to the wind vector to align it with the true North-oriented LEC system.
 
@@ -158,14 +159,16 @@ which aims to orient the coordinate system such that the new velocity components
 
 .. math::
 
-   \tilde{u} \simeq |\vec{U}|, \quad \tilde{v} \simeq 0, \quad \tilde{w} \simeq 0
+   \tilde{u} \simeq |\vec{U}|, \quad \tilde{v} \simeq 0, \quad \tilde{w} \simeq 0 \quad .
 
 Here, :math:`\vec{U} = (u, v, w)` are the instantaneous wind components in the original (sensor-based) frame, 
 and :math:`\tilde{\vec{U}} = (\tilde{u}, \tilde{v}, \tilde{w})` are the components in the streamline frame.
 
 The procedure involves:
 
-1. Computing the **mean wind vector** :math:`(\overline{u}, \overline{v}, \overline{w})` by applying a centered moving average to each component. The averaging is performed using a **sliding window**, whose length is provided by the user through the configuration parameter ``window_length_averaging`` in the file ``config.txt``;
+1. Computing the **mean wind vector** :math:`(\overline{u}, \overline{v}, \overline{w})` by applying a centered moving average to each component. 
+   The averaging is performed using a **sliding window**, whose length is provided by the user through 
+   the configuration parameter ``window_length_averaging`` in the file ``config.txt``.
 
 2. calculating the angles
    :math:`\theta` and :math:`\phi` that define the orientation of the mean wind vector in the original frame. 
@@ -199,6 +202,7 @@ The procedure involves:
    v \\
    w
    \end{bmatrix}
+   \quad .
 
 This operation effectively removes the mean crosswind and vertical components from the signal, 
 aligning the flow with the x-axis in the new reference frame.
@@ -246,7 +250,7 @@ Then, the wind direction is computed from the averaged components using the mete
 
 .. math::
 
-   \rho= \left( \arctan2(u, v) + 180 \right) \bmod 360 .
+   \rho= \left( \arctan2(u, v) + 180 \right) \bmod 360 \quad .
 
 This calculation is implemented in the function ``frame.wind_dir_LEC_reference()``, which at this stage does **not require** 
 any additional information about the instrument model or azimuth, as these were used upstream in the coordinate rotation.
@@ -272,7 +276,7 @@ The wind direction is then computed as:
 
 .. math::
 
-   \rho = \left( \arctan2(u_{\text{LEC}}, v_{\text{LEC}}) + \alpha + 180 \right) \bmod 360
+   \rho = \left( \arctan2(u_{\text{LEC}}, v_{\text{LEC}}) + \alpha + 180 \right) \bmod 360 \quad .
 
 where :math:`\alpha` is the azimuth angle.
 

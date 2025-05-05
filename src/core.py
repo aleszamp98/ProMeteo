@@ -5,7 +5,7 @@ import configparser
 from typing import Tuple
 import warnings
 
-def load_config(path: str) -> dict:
+def load_config(path : str) -> dict:
     """
     Load and validate parameters from a configuration file.
 
@@ -159,8 +159,8 @@ def import_data(path : str) -> pd.DataFrame:
 
     return data
 
-def min_to_points(minutes: int,
-                  sampling_freq: int
+def min_to_points(minutes : int,
+                  sampling_freq : int
                   ) -> int:
     """
     Computes the number of data points contained in a signal of known sampling frequency
@@ -259,8 +259,8 @@ def running_stats(array: np.ndarray,
 
     return running_mean, running_std
 
-def running_stats_robust(array: np.ndarray, 
-                  window_length: int
+def running_stats_robust(array : np.ndarray, 
+                  window_length : int
                   ) -> Tuple[np.ndarray, np.ndarray]:
     """
     Compute the running (moving) median and robust standard deviation of a 1D array using a sliding window.
