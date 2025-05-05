@@ -11,27 +11,17 @@ It addresses specific needs of scientists and analysts working with data collect
 ## Features
 ProMeteo is capable of:
 
+- Filling missing timestamps in a time series, accordingly to a specified sampling frequency
 - Removing non-physical values from time series.
 - Despiking time series using two methodologies:
-  - *Vickers and Mahrt, 1997*
+  - *Vickers and Mahrt, 1997* method
   - A costum method called "robust"
 - Interpolating missing or removed values to obtain a continuous time series.
-- Calculating wind direction from horizontal wind components in the intrinsic reference system of the sonic anemometer.
-- Performing coordinate rotation into the streamline reference frame (as defined by *Kaimal and Finnigan, 1994*).
+- Calculating wind direction from horizontal wind components.
+- Performing wind components rotation, from the intrinsic sonic coordinate frame to the:
+   - *streamline reference frame* (as defined by *Kaimal and Finnigan, 1994*).
+   - *LEC (Local Earth Coordinate) reference frame*
 
----
-
-## Dependencies
-To run ProMeteo, the following Python packages are required:
-
-- `numpy`
-- `pandas`
-
-You can install them with:
-
-```bash
-pip install numpy pandas
-```
 
 # Documentation
 

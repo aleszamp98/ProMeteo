@@ -36,6 +36,9 @@ Execution is managed via the main script ``main.py``, which should be run from t
 
 This will execute the script, which will read the configuration file located in the ``/config`` subdirectory.
 
+It is possible to generate synthetic input data using the ``generate_data.py`` script located in the ``/data`` directory.  
+A detailed description of this synthetic dataset is available in the section :ref:`test-data`.
+
 Requirements
 ------------
 

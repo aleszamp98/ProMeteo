@@ -6,6 +6,7 @@ Thumbs.db
 temp/
 docs/build/
 logs/
+data/*.csv
 
 *.log
 

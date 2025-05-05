@@ -12,6 +12,8 @@ release = '1.0.0'
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.napoleon',  # Supporto per docstring Google/NumPy
+    'nbsphinx',
+    'sphinx.ext.mathjax',
     # 'sphinx_autodoc_typehints',  # Aggiunge automaticamente gli hints dei tipi
 ]
 
@@ -21,6 +23,12 @@ exclude_patterns = []
 
 
 # -- Options for HTML output -------------------------------------------------
-html_theme = 'sphinx_rtd_theme'
+html_theme = "sphinx_rtd_theme"
+
+html_theme_options = {
+    "collapse_navigation": False,
+    "navigation_depth": 3,
+    "titles_only": False
+}
 html_logo = "../../img/logo.png"
 html_static_path = ['_static']
