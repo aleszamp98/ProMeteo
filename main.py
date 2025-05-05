@@ -108,6 +108,9 @@ def main():
                     - For the sonic temperature: {c_T}
                 """)
         for col, c in zip(col_list, [c_H, c_H, c_V, c_T]):
+            logger.info(f"""
+                Despiking of '{col}' time series
+                """)
             array = data_cleaned[col].to_numpy()
             data_despiked[col] = pre_processing.despiking_VM97(array, c, window_points, max_length_spike, max_iterations, logger)
             after = data_despiked[col].to_numpy() # temporary
@@ -116,7 +119,7 @@ def main():
             replaced = np.sum((array != after) & ~both_nan)
             del after
             logger.info(f"""
-                    Number of modified values: {replaced} 
+                Number of modified values: {replaced} 
                     """)
     elif despiking_method == "robust":
         # Robust Despiking Method
@@ -126,10 +129,13 @@ def main():
                 - Selected constant: {c_robust}
                 """)
         for col in col_list:
+            logger.info(f"""
+                Despiking of '{col}' time series
+                """)
             array = data_cleaned[col].to_numpy()
             data_despiked[col], count = pre_processing.despiking_robust(array, c_robust, window_points)
             logger.info(f"""
-                    Number of modified values: {count} 
+                Number of modified values: {count} 
                     """)
     del data_cleaned  # cleaning environment
 
@@ -163,6 +169,7 @@ def main():
             Rotation to {reference_frame} reference frame
             and Wind Direction computation.
             - Moving window length: {window_length_averaging} min => {window_avg_points} points
+            - Azimuth: {azimuth}
             - Horizontal wind speed threshold for wind direction computation: {wind_dir_threshold}
             """)
 
