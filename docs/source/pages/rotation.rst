@@ -10,8 +10,8 @@ ProMeteo provides tools to:
 
 - rotate the reference frame to alternative coordinate systems:
 
-  - **LEC** (Local Earth Coordinate)
-  - **Streamline**, following the procedure described in [Kaimal1994]_,
+  - **LEC** (Local Earth Coordinate);
+  - **Streamline**, following the procedure described in [Kaimal1994]_;
 
 - compute the **horizontal wind direction** following meteorological conventions.
 
@@ -20,9 +20,9 @@ Rotation to LEC reference
 
 The **LEC (Local Earth Coordinate)** system is the meteorological standard. In this system:
 
-- *u* is the *zonal* wind component. It is aligned with the x-axis, pointing from West to East, and is positive when the wind blows **from the West** (i.e., towards the East),
-- *v* is the *meridional* wind component. It is aligned with the y-axis, pointing from South to North, and is positive when the wind blows **from the South**,
-- *w* is the *vertical* wind component.
+- *u* is the *zonal* wind component. It is aligned with the x-axis, pointing from West to East, and is positive when the wind blows **from the West** (i.e., towards the East);
+- *v* is the *meridional* wind component. It is aligned with the y-axis, pointing from South to North, and is positive when the wind blows **from the South**;
+- *w* is the *vertical* wind component. It is aligned with the z-axis, pointing upwards, and is positive when the wind blows **upwards**.
 
 This transformation is handled by the function:  
 ``pre_processing.rotation_to_LEC_reference()``
@@ -43,11 +43,12 @@ Transformation formulas:
 
 .. math::
 
-   \begin{align}
-   u_{LEC} &= -u_{YOUNG} \\
-   v_{LEC} &= -v_{YOUNG} \\
-   w_{LEC} &=  w_{YOUNG}
-   \end{align}
+   \begin{cases}
+   u_{LEC} = -u_{YOUNG} \\
+   v_{LEC} = -v_{YOUNG} \\
+   w_{LEC} = w_{YOUNG}
+   \end{cases}
+   \quad .
 
 In matrix notation:
 
@@ -69,6 +70,7 @@ In matrix notation:
    v_{YOUNG} \\
    w_{YOUNG}
    \end{bmatrix}
+   \quad .
 
 **Campbell CSAT3**
 
@@ -78,18 +80,19 @@ In matrix notation:
 
 For the CSAT3:
 
-- the *u* component in LEC corresponds to the negative of the instrument's *v* component,
-- the *v* component in LEC corresponds to the instrument's *u* component,
+- the *u* component in LEC corresponds to the instrument's *v* component;
+- the *v* component in LEC corresponds to the negative of the instrument's *u* component;
 - the *w* component is already aligned with the vertical.
 
 Transformation formulas:
 
 .. math::
-    \begin{align}
-   u_{LEC} = -v_{CSAT3} \\
-   v_{LEC} = u_{CSAT3} \\
+    \begin{cases}
+   u_{LEC} = v_{CSAT3} \\
+   v_{LEC} = -u_{CSAT3} \\
    w_{LEC} = w_{CSAT3}
-    \end{align}
+    \end{cases}
+   \quad .
 
 In matrix notation:
 
@@ -111,14 +114,17 @@ In matrix notation:
    v_{CSAT3} \\
    w_{CSAT3}
    \end{bmatrix}
+   \quad .
 
 **Azimuthal correction**
 
-If the instrument is not oriented with its head pointing North, 
-an additional rotation in the horizontal plane is required. 
-This rotation is defined by the **azimuth angle** :math:`\alpha`, 
-which is provided as an input to the function and defined in the ``config.txt`` 
-through the ``azimuth`` parameter.
+If the instrument is not oriented with its head pointing North but instead at a certain angle, 
+known as the azimuth, relative to North, the transformation previously defined leads to a 
+reference frame similar to the LEC system, with the y-axis aligned with the direction specified by the azimuth. 
+
+Therefore, an additional rotation is required, 
+defined by the azimuth angle :math:`\alpha`, which is provided as input to the function 
+and specified in the ``config.txt`` file through the ``azimuth`` parameter.
 
 The corresponding rotation matrix is:
 
@@ -131,17 +137,17 @@ The corresponding rotation matrix is:
    0 & 0 & 1
    \end{bmatrix}
 
-This matrix is applied to the wind vector to align it with the true North-oriented LEC system.
+This matrix is then applied to the wind vector to align it with the true North-oriented LEC system.
 
 Streamline rotation
 --------------------
 
-An alternative reference frame is provided by the **physical streamline (PS) coordinate system**, 
+An alternative reference frame is the **physical streamline (PS) coordinate system**, 
 which is defined directly by the structure of the flow itself. 
 In this system, the orthonormal basis vectors :math:`(e_1, e_2, e_3)` are oriented such that:
 
-- :math:`e_1` is tangent to the local mean streamline,
-- :math:`e_2` is aligned with the principal normal to the streamline,
+- :math:`e_1` is tangent to the local mean streamline;
+- :math:`e_2` is aligned with the principal normal to the streamline;
 - :math:`e_3` is aligned with the binormal direction.
 
 This approach follows the procedure described in [Kaimal1994]_ and 
@@ -159,17 +165,21 @@ and :math:`\tilde{\vec{U}} = (\tilde{u}, \tilde{v}, \tilde{w})` are the componen
 
 The procedure involves:
 
-1. Computing the **mean wind vector** :math:`(\overline{u}, \overline{v}, \overline{w})` by applying a centered moving average to each component. The averaging is performed using a **sliding window**, whose length is provided by the user through the configuration parameter ``window_length_averaging`` in the file ``config.txt``.
+1. Computing the **mean wind vector** :math:`(\overline{u}, \overline{v}, \overline{w})` by applying a centered moving average to each component. The averaging is performed using a **sliding window**, whose length is provided by the user through the configuration parameter ``window_length_averaging`` in the file ``config.txt``;
 
-2. Calculating the **yaw** and **pitch** angles from the mean wind components:
+2. calculating the angles
+   :math:`\theta` and :math:`\phi` that define the orientation of the mean wind vector in the original frame. 
+   These angles are computed using the following equations:
 
-.. math::
+   .. math::
 
-   \theta = \arctan\left(\frac{\overline{v}}{\overline{u}}\right), \qquad
-   \phi = \arctan\left(\frac{\overline{w}}{s}\right), \qquad
-   s = \sqrt{\overline{u}^2 + \overline{v}^2}
+      \theta = \arctan\left(\frac{\overline{v}}{\overline{u}}\right), \qquad
+      \phi = \arctan\left(\frac{\overline{w}}{s}\right), \qquad
+      s = \sqrt{\overline{u}^2 + \overline{v}^2};
 
-3. Applying the following rotation matrix:
+   where :math:`s` is the magnitude of the horizontal wind vector.
+
+3. applying the following rotation matrix:
 
 .. math::
 
@@ -195,9 +205,9 @@ aligning the flow with the x-axis in the new reference frame.
 
 In this system:
 
-- *u* is the *streamwise* velocity component, aligned with the mean horizontal wind,
-- *v* is the *crosswise* velocity component,
-- *w* is the *normal-to-the-streamline* velocity component.
+- :math:`\tilde{u}` is the *streamwise* velocity component, aligned with the mean horizontal wind;
+- :math:`\tilde{v}` is the *crosswise* velocity component;
+- :math:`\tilde{w}` is the *normal-to-the-streamline* velocity component.
 
 This transformation is applied using the function:
 
@@ -208,11 +218,8 @@ It is important to note that this rotation is data-driven and **does not** requi
 Horizontal wind direction
 --------------------------
 
-Horizontal wind direction
---------------------------
-
 In meteorology, the **horizontal wind direction** is expressed as the direction **from which** the wind is blowing, 
-measured clockwise from true North. For example, a wind direction of 90° indicates wind blowing **from the East**.
+measured clockwise from the North. For example, a wind direction of 90° indicates wind blowing **from the East**.
 
 In ProMeteo, the wind direction is computed starting from the **averaged horizontal components of the wind vector**, 
 rather than averaging wind direction angles themselves. This distinction is crucial: wind direction is a circular quantity in the range [0°, 360°), 
@@ -227,49 +234,52 @@ This operation is performed upstream of the wind direction calculation, ensuring
 The main script (``main.py``) chooses the method of wind direction computation, 
 depending on which reference frame has been selected in the configuration file.
 
-**Wind direction in the LEC system**
+Wind direction in the LEC system
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 If the LEC reference frame is selected, the main script first applies a rotation of the wind vector to the LEC system 
 by calling ``pre_processing.rotation_to_LEC_reference()``. This function requires the **model of the sonic anemometer** 
-and the **azimuth orientation** (the heading of the instrument with respect to true North). 
+and the **azimuth orientation** (The angle between the direction the instrument is facing and true North, measured positively in the clockwise direction).
 
 Once the wind components have been rotated to the LEC system, the **horizontal components** are averaged using ``core.running_stats()``. 
 Then, the wind direction is computed from the averaged components using the meteorological convention via:
 
 .. math::
 
-   \theta_{\text{wind}} = \left( \mathrm{deg} \left[ \arctan2(u, v) \right] + 180 \right) \bmod 360
+   \rho= \left( \arctan2(u, v) + 180 \right) \bmod 360 .
 
 This calculation is implemented in the function ``frame.wind_dir_LEC_reference()``, which at this stage does **not require** 
 any additional information about the instrument model or azimuth, as these were used upstream in the coordinate rotation.
 
-**Wind direction in the streamline system**
+Wind direction in the streamline system
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 If the streamline coordinate system is chosen, the main script performs the streamline rotation using 
 ``frame.streamline_rotation()``. This procedure, as described above, 
 does **not** require knowledge of the instrument model or orientation.
 
-However, for consistency with the meteorological definition of wind direction (referenced to geographic North), 
+However, for consistency with the meteorological definition of wind direction (referenced to North), 
 the direction is computed in the **LEC frame**. The steps are as follows:
 
-1. Apply the streamline rotation to the original time series.
-2. Use ``core.running_stats()`` to compute the **averaged horizontal components** in the original (sonic) coordinate system.
-3. Pass the averaged components to ``frame.wind_dir_modeldependent_reference()``, which performs a model-dependent 
+1. Apply the streamline rotation to the original time series;
+2. use ``core.running_stats()`` to compute the **averaged horizontal components** in the original (sonic) coordinate system;
+3. pass the averaged components to ``frame.wind_dir_modeldependent_reference()``, which performs a model-dependent 
    rotation to a LEC-like reference frame, 
-   where the **y-axis is oriented at an azimuth angle** with respect to true North, 
+   where the **y-axis is oriented at an azimuth angle** with respect to North, 
    using the instrument model and azimuth.
 
 The wind direction is then computed as:
 
 .. math::
 
-   \theta_{\text{wind}} = \left( \mathrm{deg} \left[ \arctan2(u_{\text{LEC}}, v_{\text{LEC}}) \right] + \alpha + 180 \right) \bmod 360
+   \rho = \left( \arctan2(u_{\text{LEC}}, v_{\text{LEC}}) + \alpha + 180 \right) \bmod 360
 
-where :math:`\alpha` is the azimuth angle of the sonic head with respect to North.
+where :math:`\alpha` is the azimuth angle.
 
 **Thresholding on wind speed**
 
-In both cases, it is possible—and recommended—to set a minimum threshold on the horizontal wind speed. 
+In both cases, it is possible, and recommended, to set a minimum threshold on the horizontal wind speed.
+This threshold is an input of the mentioned functions and can be defined in the configuration file through the parameter ``wind_speed_threshold``.
 When the magnitude of the horizontal wind vector is below this threshold, the direction is set to `NaN`, 
 as it is considered not meaningful. This ensures that very low-speed or stagnant wind conditions, 
 which may introduce noise or spurious directional values, are properly filtered.

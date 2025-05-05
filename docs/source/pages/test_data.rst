@@ -12,7 +12,7 @@ sonic coordinate system of the instrument.
 Only the ``u`` component of the wind is intentionally altered by introducing anomalies, 
 with the goal of testing the capabilities of the ``pre_processing`` module. 
 An example of how to use these features and the resulting effects on the raw data 
-is provided in the section: ``usage_example``.
+is provided at the page: :doc:`pre_processing_example`.
 
 
 Variables

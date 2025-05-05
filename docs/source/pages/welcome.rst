@@ -6,9 +6,11 @@ Welcome to ProMeteo
 **ProMeteo** is a Python library designed to manipulate time series data collected by sonic anemometers. 
 It is structured into three modules:
 
-- ``core`` for importing the raw data and the configuration file and computing basic statistics on sliding window.
-- ``pre_processing``: for uniforming and cleaning raw time series.
+- ``core``: for importing the raw data and the configuration file and computing basic statistics on sliding window;
+- ``pre_processing``: for uniforming and cleaning raw time series;
 - ``frame``: for rotating wind data and computing wind direction.
+
+These modules can be found in the ``src/`` directory of the repository.
 
 To run **ProMeteo**, you first need to clone the repository to a local directory using one of the standard GitHub cloning methods.
 
@@ -25,7 +27,7 @@ Or using SSH:
     git clone git@github.com:aleszamp98/ProMeteo.git
 
 Once cloned, you can either place your data files in the ``/data`` subdirectory, 
-or specify a custom data source path in the configuration file located at ``/config/config.txt`` 
+or specify a custom data source path in the configuration file, located at ``/config/config.txt``, 
 by setting the ``rawdata_path`` parameter accordingly.
 
 Execution is managed via the main script ``main.py``, which should be run from the root directory of the project using the following command:
@@ -59,8 +61,8 @@ Supported Anemometers
 ----------------------
 **ProMeteo** currently supports the processing of time series data from the following sonic anemometer models:
 
-- RM Young 81000: `Official Manual <https://www.youngusa.com/wp-content/uploads/2008/01/81000-9028I29.pdf>`_
-- Campbell CSAT3: `Official Manual <https://s.campbellsci.com/documents/us/manuals/csat3.pdf>`_
+- RM Young 81000: `RM Young 81000 Manual <https://www.youngusa.com/wp-content/uploads/2008/01/81000-9028I29.pdf>`_
+- Campbell CSAT3: `CSAT3 Manual <https://s.campbellsci.com/documents/us/manuals/csat3.pdf>`_
 
 It handles the three wind components defined in each manufacturer's proprietary Cartesian coordinate system,  
 as well as the time series of sonic temperature.
@@ -88,16 +90,17 @@ Main Script Workflow
 
 The ``main.py`` script performs the following steps:
 
-1. Loads the configuration file.
-2. Imports raw data into a ``pandas.DataFrame``.
+1. Loads the configuration file;
+2. Imports raw data into a ``pandas.DataFrame``;
 3. Preprocesses the data:
-   - Fills missing timestamps.
-   - Removes physically unrealistic values based on thresholds. 
-   - Despikes the data using the selected method (VM97 or robust), 
-   see the :doc:`Despiking page <../pages/despiking>` for more details.
-   - Interpolates NaN values.
-4. Saves the preprocessed data to ``preprocessed.csv``.
-5. Rotates the wind components to the specified reference frame (LEC or streamline) and computes wind direction in the LEC frame.
+
+   - Fills missing timestamps;
+   - Removes physically unrealistic values based on thresholds;
+   - Despikes the data using the selected method (VM97 or robust); see the :doc:`Despiking page <../pages/despiking>` for more details;
+   - Interpolates NaN values;
+
+4. Saves the preprocessed data to ``preprocessed.csv``;
+5. Rotates the wind components to the specified reference frame (LEC or streamline) and computes wind direction in the LEC frame;
    See the :doc:`Rotation page <../pages/rotation>` for more details.
 6. Saves the rotated data to ``preprocessed_rotated_<selected_frame>_data.csv``.
 
@@ -107,7 +110,7 @@ The ``main.py`` script performs the following steps:
 
 During execution, the program communicates with the user via the terminal 
 and generates a log file that captures the same interactions, 
-allowing it to be run in the background .
+allowing it to be run in the background.
 
 Configuration File
 ------------------
@@ -116,49 +119,52 @@ The configuration file can be found at ``config/config.txt``. It is a plain text
 
 - **[general]**
   
-  - ``rawdata_path``: path to the input .csv file containing raw data, relative to the script location.
-  - ``dir_out``: path of the output directory, relative to the script location, where results will be saved.
-  - ``sampling_freq``: sampling frequency in Hz.
+  - ``rawdata_path``: path to the input .csv file containing raw data, relative to the script location;
+  - ``dir_out``: path of the output directory, relative to the script location, where results will be saved;
+  - ``sampling_freq``: sampling frequency in Hz;
   - ``model``: sonic anemometer model:
     
-    - ``RM_YOUNG_81000``
-    - ``CAMPBELL_CSAT3``
+    - ``RM_YOUNG_81000``;
+    - ``CAMPBELL_CSAT3``.
 
 - **[remove_beyond_threshold]**
 
   - Thresholds beyond which values are replaced with NaN:
-    - ``horizontal_threshold``: for horizontal wind components.
-    - ``vertical_threshold``: for vertical wind component.
+
+    - ``horizontal_threshold``: for horizontal wind components;
+    - ``vertical_threshold``: for vertical wind component;
     - ``temperature_threshold``: for sonic temperature.
   
 - **[despiking]**
 
   - ``despiking_method``: method for spike detection and removal:
     
-    - ``VM97``: Vickers and Mahrt (1997) method.
+    - ``VM97``: Vickers and Mahrt (1997) method;
     - ``robust``: custom method.
 
   - Parameters for despiking logic, see :doc:`Despiking page <../pages/despiking>`:
-    - ``window_length_despiking``: length of the moving window (in minutes).
-    - ``max_length_spike``: max consecutive out-of-bound values to flag as spikes (used only with ``VM97`` method).
-    - ``max_iterations``: max number of despiking iterations (used only with ``VM97`` method). 
-    - ``c_H``, ``c_V``, ``c_T``: (used only with ``VM97`` method)
+
+    - ``window_length_despiking``: length of the moving window (in minutes);
+    - ``max_length_spike``: max consecutive out-of-bound values to flag as spikes (used only with ``VM97`` method);
+    - ``max_iterations``: max number of despiking iterations (used only with ``VM97`` method);
+    - ``c_H``, ``c_V``, ``c_T``: (used only with ``VM97`` method);
     - ``c_robust``: used with ``robust`` method.
 
 - **[rotation]**
 
   - ``reference_frame``: reference frame for wind component rotation, see :doc:`Rotation page <../pages/rotation>`:
     
-    - ``LEC`` Local Earth Coordinate system
-    - ``streamline``
+    - ``LEC``: Local Earth Coordinate system;
+    - ``streamline``: Streamline coordinate system;
 
-  - ``azimuth``: azimuthal orientation of the anemometer head (in degrees from North).
+  - ``azimuth``: azimuthal orientation of the anemometer head (in degrees, with respect to the North).
+  - ``wind_dir_threshold``: threshold for horizontal wind speed below which wind direction is not computed.
 
 - **[averaging]**
 
   - ``window_length_averaging``: moving window length (in minutes) used to compute:
     
-    - Mean horizontal wind components for streamline rotation.
+    - Mean horizontal wind components for streamline rotation;
     - Wind direction.
 
 Design Notes
@@ -189,9 +195,9 @@ Contributing
 
 **ProMeteo** is an open project. Suggestions, corrections, and contributions are very welcome!
 
-- Open an issue for bugs or feature requests
-- Submit a pull request to contribute code or improvements
-- Or contact me directly (`see GitHub profile page <https://github.com/aleszamp98>`_)
+- Open an issue for bugs or feature requests;
+- Submit a pull request to contribute code or improvements;
+- Or contact me directly (`see GitHub profile page <https://github.com/aleszamp98>`_).
 
 How to Cite
 -----------
@@ -213,11 +219,11 @@ Planned Features
 
 Future versions of Prometeo will include:
 
-- Implementation of Reynolds decomposition.
+- Implementation of Reynolds decomposition;
 - Computation of derived atmospheric variables such as:
   
-  - Richardson number.
-  - Brunt–Väisälä frequency.
+  - Richardson number;
+  - Brunt–Väisälä frequency;
 
 - Wavelet analysis of time series.
 
