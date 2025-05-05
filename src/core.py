@@ -64,9 +64,10 @@ def load_config(path: str) -> dict:
         # Averaging
         window_length_averaging = config.getfloat('averaging', 'window_length_averaging')
 
-        # Rotation
+        # Rotation and wind direction
         reference_frame = config.get('rotation', 'reference_frame')
         azimuth = config.getfloat('rotation', 'azimuth')
+        wind_dir_threshold = config.getfloat('rotation', 'wind_dir_threshold')
 
     except configparser.NoSectionError as e:
         raise configparser.NoSectionError(e.section) from e
@@ -110,6 +111,7 @@ def load_config(path: str) -> dict:
         'window_length_averaging': window_length_averaging,
         'reference_frame': reference_frame,
         'azimuth': azimuth,
+        'wind_dir_threshold' : wind_dir_threshold, 
     }
 
 def import_data(path : str) -> pd.DataFrame:

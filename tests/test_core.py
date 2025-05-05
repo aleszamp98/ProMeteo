@@ -66,6 +66,7 @@ window_length_averaging = 10.0
 [rotation]
 reference_frame = LEC
 azimuth = 90.0
+wind_dir_threshold = 0.5
 """
 # --- Valid config test ---
 def test_valid_config():

@@ -51,6 +51,7 @@ def main():
     window_length_averaging = params['window_length_averaging']
     reference_frame = params['reference_frame']
     azimuth = params['azimuth']
+    wind_dir_threshold = params['wind_dir_threshold']
 
     # === Data Import ===
     # Import raw data from the specified path, expecting a CSV file with 4 columns: Time, u,v,w,T_s
@@ -158,6 +159,7 @@ def main():
             Rotation to {reference_frame} reference frame
             and Wind Direction computation.
             - Moving window length: {window_length_averaging} min => {window_avg_points} points
+            - Horizontal wind speed threshold for wind direction computation: {wind_dir_threshold}
             """)
 
     wind = np.array([data_interp['u'].to_numpy(),
@@ -170,13 +172,13 @@ def main():
         wind_rotated = frame.rotation_to_LEC_reference(wind, azimuth, model)
         for i in range(3):
             wind_averaged[i, :], _ = core.running_stats(wind_rotated[i, :], window_avg_points)
-        wind_direction = frame.wind_dir_LEC_reference(wind_averaged[0], wind_averaged[1])
+        wind_direction = frame.wind_dir_LEC_reference(wind_averaged[0], wind_averaged[1], wind_dir_threshold)
     elif reference_frame == "streamline":
         # Rotation to streamline reference frame
         for i, comp in enumerate(['u', 'v', 'w']):
             wind_averaged[i, :], _ = core.running_stats(data_interp[comp].to_numpy(), window_avg_points)
         wind_rotated = frame.rotation_to_streamline_reference(wind, wind_averaged)
-        wind_direction = frame.wind_dir_modeldependent_reference(wind_averaged[0], wind_averaged[1], azimuth, model)
+        wind_direction = frame.wind_dir_modeldependent_reference(wind_averaged[0], wind_averaged[1], azimuth, model, wind_dir_threshold)
         del wind_averaged  # Clean up
 
     # === Save Rotated Data ===

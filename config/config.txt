@@ -34,7 +34,8 @@ c_robust = 3.5
 reference_frame = streamline
 # azimuth angle (with respect to the North) of the anemometer head (in degrees)
 azimuth = 0
-
+# minimum horizontal wind speed, below which wind direction is set to NaN
+wind_dir_threshold = 0.5
 
 [averaging]
 # length in [min] of the moving window to compute the average of wind components.
