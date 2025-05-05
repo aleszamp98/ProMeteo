@@ -116,8 +116,8 @@ The configuration file can be found at ``config/config.txt``. It is a plain text
 
 - **[general]**
   
-  - ``rawdata_path``: path to the input `.csv` file containing raw data.
-  - ``dir_out``: output directory where results will be saved.
+  - ``rawdata_path``: path to the input .csv file containing raw data, relative to the script location.
+  - ``dir_out``: path of the output directory, relative to the script location, where results will be saved.
   - ``sampling_freq``: sampling frequency in Hz.
   - ``model``: sonic anemometer model:
     

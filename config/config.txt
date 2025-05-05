@@ -1,8 +1,8 @@
 [general]
-# path of the input file .csv containing rawdata
-rawdata_path = /home/zampa/projects/ProMeteo/data/test_data.csv 
-# output directory
-dir_out = /home/zampa/projects/ProMeteo/data/
+# Path to the input .csv file containing raw data, relative to the main.py script location
+rawdata_path = data/test_data.csv 
+# Path to the output directory, relative to the main.py script location
+dir_out = data/
 # sampling frequency
 sampling_freq = 20
 # anemometer model: "RM_YOUNG_81000", "CAMPBELL_CSAT3"

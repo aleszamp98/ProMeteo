@@ -5,7 +5,7 @@ import pandas as pd
 dir_out = ""
 name_out = "test_data"
 
-# Simulation parameters
+# Overall parameters
 length = 60  # Total duration [minutes]
 sampl_frequency = 20  # Sampling frequency [Hz]
 dt = int((1 / sampl_frequency) * 1000)  # Sampling interval [ms]
