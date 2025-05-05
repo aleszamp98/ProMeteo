@@ -110,52 +110,16 @@ def rotation_to_streamline_reference(wind : np.ndarray,
                                      ) -> np.ndarray:
     """
     Rotate wind velocity components into the streamline coordinate system,
-    following the method described in Kaimal and Finnigan (1979).
-    
-    The rotation to the streamline frame is performed using the **double rotation** technique,
-    which aims to orient the coordinate system such that the rotated velocity components satisfy:
+    using the double rotation method described in Kaimal and Finnigan (1979).
 
-    .. math::
+    This technique aligns the coordinate system with the average wind direction,
+    such that:
+    - the streamwise component (ũ) approximates the total wind speed,
+    - the crosswise (ṽ) and vertical (w̃) components are minimized.
 
-        \tilde{u} \simeq |\vec{U}|, \quad \tilde{v} \simeq 0, \quad \tilde{w} \simeq 0 \quad .
-
-    The orientation angles of the average wind vector in the instrument’s intrinsic coordinate system are computed as:
-
-    .. math::
-
-        \theta = \arctan\left(\frac{\overline{v}}{\overline{u}}\right), \qquad
-        \phi = \arctan\left(\frac{\overline{w}}{s}\right), \qquad
-        s = \sqrt{\overline{u}^2 + \overline{v}^2};
-
-    These angles are then used to compute the instantaneous rotation matrix that transforms the instantaneous wind components:
-
-    .. math::
-
-        \begin{bmatrix}
-        \tilde{u} \\
-        \tilde{v} \\
-        \tilde{w}
-        \end{bmatrix}
-        =
-        \begin{bmatrix}
-        \cos(\phi)\cos(\theta) & \cos(\phi)\sin(\theta) & \sin(\phi) \\
-        -\sin(\theta) & \cos(\theta) & 0 \\
-        -\sin(\phi)\cos(\theta) & -\sin(\phi)\sin(\theta) & \cos(\phi)
-        \end{bmatrix}
-        \begin{bmatrix}
-        u \\
-        v \\
-        w
-        \end{bmatrix}
-
-    This operation effectively removes the mean crosswind and vertical components from the signal,
-    aligning the flow with the x-axis in the new reference frame.
-
-    In this system:
-
-    - :math:`\tilde{u}` is the *streamwise* velocity component, aligned with the mean horizontal wind;
-    - :math:`\tilde{v}` is the *crosswise* velocity component;
-    - :math:`\tilde{w}` is the *normal-to-the-streamline* velocity component.
+    The rotation is defined at each instant using the average wind vector,
+    removing the mean crosswind and vertical components and aligning the flow
+    with the x-axis of the new reference frame.
 
     Parameters
     ----------
@@ -181,13 +145,13 @@ def rotation_to_streamline_reference(wind : np.ndarray,
 
     Notes
     -----
-    The streamline coordinate system aligns:
-    - x-axis with the mean horizontal wind direction,
-    - y-axis perpendicular to the x-axis horizontally,
-    - z-axis aligned with the mean vertical direction.
+    This method is most appropriate for stationary signals, where the mean wind
+    vector is well defined and stable over time.
 
-    The rotation is most appropriate for stationary signals, where the mean wind vector is well-defined
-    and the assumption of a constant orientation holds.
+    See Also
+    --------
+    For theoretical background and mathematical details, see the documentation page:
+    "Frame rotation and wind direction".
 
     References
     ----------
