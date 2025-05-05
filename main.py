@@ -110,7 +110,11 @@ def main():
         for col, c in zip(col_list, [c_H, c_H, c_V, c_T]):
             array = data_cleaned[col].to_numpy()
             data_despiked[col] = pre_processing.despiking_VM97(array, c, window_points, max_length_spike, max_iterations, logger)
-            replaced = np.sum(array != data_despiked[col].to_numpy())
+            after = data_despiked[col].to_numpy() # temporary
+            both_nan = np.isnan(array) & np.isnan(after)
+            # Maschera: True dove sono diversi e non entrambi NaN
+            replaced = np.sum((array != after) & ~both_nan)
+            del after
             logger.info(f"""
                     Number of modified values: {replaced} 
                     """)
