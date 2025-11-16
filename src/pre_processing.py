@@ -294,6 +294,7 @@ def despiking_VM97(array_to_despike : np.ndarray,
     count_spike = 1  # Initial value greater than 0 to start the despiking cycle
 
     # The loop continues until no more spikes are detected or the maximum number of iterations is reached
+    max_iterations = max_iterations - 1  # Adjust for zero-based counting
     while count_spike != 0 and iteration <= max_iterations:
         # Calculate the running mean and standard deviation for the current array
         running_mean, running_std = core.running_stats(array_despiked, window_length)
